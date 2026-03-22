@@ -1,4 +1,9 @@
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+
 export default function HowItWorksSection() {
+  const { ref: headerRef, visible: headerVisible } = useScrollReveal(0.2);
+  const { ref: archRef, visible: archVisible } = useScrollReveal(0.15);
+
   const steps = [
     {
       number: "01",
@@ -62,7 +67,10 @@ export default function HowItWorksSection() {
   return (
     <section id="how-it-works" className="py-24 relative hex-bg">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
+        <div
+          ref={headerRef}
+          className={`text-center mb-16 transition-all duration-700 ${headerVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+        >
           <div className="section-label mb-4">How It Works</div>
           <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4">
             Three steps to a{" "}
@@ -73,46 +81,53 @@ export default function HowItWorksSection() {
           </p>
         </div>
 
-        {/* Steps */}
         <div className="relative max-w-5xl mx-auto">
-          {/* Connector line */}
           <div className="hidden lg:block absolute top-16 left-[16.5%] right-[16.5%] h-px bg-gradient-to-r from-accent/30 via-primary/50 to-risk-safe/30" />
 
           <div className="grid lg:grid-cols-3 gap-8">
-            {steps.map((step, i) => (
-              <div key={i} className="relative">
-                {/* Number badge */}
-                <div className="flex justify-center mb-6">
-                  <div
-                    className={`w-14 h-14 rounded-2xl ${step.bg} border ${step.border} flex items-center justify-center`}
-                    style={{ color: step.color, boxShadow: `0 0 20px ${step.color}30` }}
-                  >
-                    {step.icon}
+            {steps.map((step, i) => {
+              const { ref, visible } = useScrollReveal(0.1);
+              return (
+                <div
+                  key={i}
+                  ref={ref}
+                  className={`relative transition-all duration-700 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+                  style={{ transitionDelay: `${i * 150}ms` }}
+                >
+                  <div className="flex justify-center mb-6">
+                    <div
+                      className={`w-14 h-14 rounded-2xl ${step.bg} border ${step.border} flex items-center justify-center hover:scale-110 transition-transform duration-300`}
+                      style={{ color: step.color, boxShadow: `0 0 20px ${step.color}30` }}
+                    >
+                      {step.icon}
+                    </div>
                   </div>
-                </div>
 
-                <div className="glass-card p-6 rounded-2xl text-center lg:text-left">
-                  <div className="font-mono text-xs mb-2" style={{ color: step.color }}>
-                    STEP {step.number}
+                  <div className="glass-card p-6 rounded-2xl text-center lg:text-left hover:border-primary/30 transition-colors duration-300">
+                    <div className="font-mono text-xs mb-2" style={{ color: step.color }}>
+                      STEP {step.number}
+                    </div>
+                    <h3 className="font-display font-bold text-xl text-foreground mb-1">{step.title}</h3>
+                    <p className="text-xs text-foreground-subtle font-mono mb-4">{step.subtitle}</p>
+                    <ul className="space-y-2">
+                      {step.details.map((d) => (
+                        <li key={d} className="flex items-start gap-2 text-sm text-foreground-muted">
+                          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5" style={{ background: step.color }} />
+                          {d}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <h3 className="font-display font-bold text-xl text-foreground mb-1">{step.title}</h3>
-                  <p className="text-xs text-foreground-subtle font-mono mb-4">{step.subtitle}</p>
-                  <ul className="space-y-2">
-                    {step.details.map((d) => (
-                      <li key={d} className="flex items-start gap-2 text-sm text-foreground-muted">
-                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5" style={{ background: step.color }} />
-                        {d}
-                      </li>
-                    ))}
-                  </ul>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
-        {/* Architecture note */}
-        <div className="max-w-3xl mx-auto mt-12 glass-card p-6 rounded-2xl">
+        <div
+          ref={archRef}
+          className={`max-w-3xl mx-auto mt-12 glass-card p-6 rounded-2xl transition-all duration-700 ${archVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+        >
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 text-primary">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

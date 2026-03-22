@@ -1,4 +1,9 @@
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+
 export default function SolutionSection() {
+  const { ref: headerRef, visible: headerVisible } = useScrollReveal(0.2);
+  const { ref: diagramRef, visible: diagramVisible } = useScrollReveal(0.1);
+
   const features = [
     {
       icon: (
@@ -47,9 +52,14 @@ export default function SolutionSection() {
 
   return (
     <section id="solution" className="py-24 relative">
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="text-center mb-16">
+      {/* Subtle glow behind section */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/4 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="container mx-auto px-4 relative z-10">
+        <div
+          ref={headerRef}
+          className={`text-center mb-16 transition-all duration-700 ${headerVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+        >
           <div className="section-label mb-4">The Solution</div>
           <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4">
             Introducing{" "}
@@ -61,10 +71,12 @@ export default function SolutionSection() {
         </div>
 
         {/* Safety Score diagram */}
-        <div className="max-w-4xl mx-auto mb-16">
+        <div
+          ref={diagramRef}
+          className={`max-w-4xl mx-auto mb-16 transition-all duration-700 delay-150 ${diagramVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+        >
           <div className="glass-card p-8 rounded-2xl">
             <div className="grid md:grid-cols-3 gap-4 items-center">
-              {/* Component scores */}
               <div className="space-y-4">
                 {[
                   { label: "Sandwich Risk", score: 12, good: true },
@@ -77,7 +89,7 @@ export default function SolutionSection() {
                       <div
                         className="h-full rounded-full transition-all duration-1000"
                         style={{
-                          width: `${item.label === "Sandwich Risk" || item.label === "Wallet Risk" ? item.score : item.score}%`,
+                          width: `${item.score}%`,
                           background: item.good ? "hsl(var(--risk-safe))" : "hsl(var(--risk-danger))",
                         }}
                       />
@@ -87,7 +99,6 @@ export default function SolutionSection() {
                 ))}
               </div>
 
-              {/* Arrow */}
               <div className="flex flex-col items-center gap-3">
                 <div className="text-foreground-subtle text-sm font-mono">AI synthesis</div>
                 <svg className="w-8 h-8 text-primary hidden md:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -98,7 +109,6 @@ export default function SolutionSection() {
                 </svg>
               </div>
 
-              {/* Final score */}
               <div className="text-center">
                 <div className="relative w-32 h-32 mx-auto">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -128,19 +138,30 @@ export default function SolutionSection() {
 
         {/* Feature cards */}
         <div className="grid md:grid-cols-3 gap-6">
-          {features.map((f) => (
-            <div key={f.title} className={`glass-card p-6 rounded-2xl border ${f.border}`} style={{ background: `linear-gradient(145deg, hsl(var(--surface-raised)), hsl(var(--surface)))` }}>
-              <div className={`w-14 h-14 rounded-xl ${f.bg} border ${f.border} flex items-center justify-center mb-4`} style={{ color: f.color }}>
-                {f.icon}
+          {features.map((f, i) => {
+            const { ref, visible } = useScrollReveal(0.1);
+            return (
+              <div
+                key={f.title}
+                ref={ref}
+                className={`glass-card p-6 rounded-2xl border ${f.border} group hover:scale-[1.02] transition-all duration-300 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+                style={{
+                  background: `linear-gradient(145deg, hsl(var(--surface-raised)), hsl(var(--surface)))`,
+                  transitionDelay: `${i * 100}ms`,
+                }}
+              >
+                <div className={`w-14 h-14 rounded-xl ${f.bg} border ${f.border} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`} style={{ color: f.color }}>
+                  {f.icon}
+                </div>
+                <h3 className="font-display font-bold text-xl text-foreground mb-1">{f.title}</h3>
+                <p className="text-xs font-mono mb-3" style={{ color: f.color }}>{f.subtitle}</p>
+                <p className="text-sm text-foreground-muted leading-relaxed mb-4">{f.desc}</p>
+                <div className={`text-xs font-mono font-bold px-3 py-1.5 rounded-lg ${f.bg} border ${f.border} inline-block`} style={{ color: f.color }}>
+                  {f.metric}
+                </div>
               </div>
-              <h3 className="font-display font-bold text-xl text-foreground mb-1">{f.title}</h3>
-              <p className="text-xs font-mono mb-3" style={{ color: f.color }}>{f.subtitle}</p>
-              <p className="text-sm text-foreground-muted leading-relaxed mb-4">{f.desc}</p>
-              <div className={`text-xs font-mono font-bold px-3 py-1.5 rounded-lg ${f.bg} border ${f.border} inline-block`} style={{ color: f.color }}>
-                {f.metric}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

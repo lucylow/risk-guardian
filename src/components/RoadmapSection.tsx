@@ -1,9 +1,47 @@
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 
+type RoadmapItem = {
+  phase: string; label: string; status: string;
+  color: string; bg: string; border: string;
+  title: string; quarter: string; items: string[];
+};
+
+function RoadmapCard({ item, delay }: { item: RoadmapItem; delay: number }) {
+  const { ref, visible } = useScrollReveal(0.1);
+  return (
+    <div
+      ref={ref}
+      className={`glass-card p-6 rounded-2xl border ${item.border} hover:scale-[1.02] transition-all duration-300 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"} ${item.status === "done" ? "shadow-glow-safe" : item.status === "in-progress" ? "shadow-glow-primary" : ""}`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-xs font-mono text-foreground-subtle">{item.phase}</span>
+        <span className={`ml-auto text-xs font-mono font-bold px-2 py-0.5 rounded-full ${item.bg} border ${item.border}`} style={{ color: item.color }}>
+          {item.label}
+        </span>
+      </div>
+      <h3 className="font-display font-bold text-lg text-foreground mb-1">{item.title}</h3>
+      <p className="font-mono text-xs mb-4" style={{ color: item.color }}>{item.quarter}</p>
+      <div className="flex items-center gap-2 mb-4">
+        <div className={`w-2 h-2 rounded-full ${item.status === "done" ? "bg-risk-safe animate-pulse" : item.status === "in-progress" ? "bg-primary animate-pulse" : "bg-border"}`} />
+        <div className="flex-1 h-px bg-border-bright" />
+      </div>
+      <ul className="space-y-2">
+        {item.items.map((f) => (
+          <li key={f} className="flex items-start gap-2 text-xs text-foreground-muted">
+            <div className={`w-1 h-1 rounded-full flex-shrink-0 mt-1.5 ${item.status === "done" ? "bg-risk-safe" : item.status === "in-progress" ? "bg-primary" : "bg-foreground-subtle"}`} />
+            {f}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function RoadmapSection() {
   const { ref: headerRef, visible: headerVisible } = useScrollReveal(0.2);
 
-  const items = [
+  const items: RoadmapItem[] = [
     {
       phase: "Phase 1", label: "LIVE", status: "done",
       color: "hsl(var(--risk-safe))", bg: "bg-risk-safe/10", border: "border-risk-safe/30",
@@ -50,48 +88,7 @@ export default function RoadmapSection() {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {items.map((item, i) => {
-            const { ref, visible } = useScrollReveal(0.1);
-            return (
-              <div
-                key={i}
-                ref={ref}
-                className={`glass-card p-6 rounded-2xl border ${item.border} hover:scale-[1.02] transition-all duration-300 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"} ${item.status === "done" ? "shadow-glow-safe" : item.status === "in-progress" ? "shadow-glow-primary" : ""}`}
-                style={{ transitionDelay: `${i * 100}ms` }}
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-xs font-mono text-foreground-subtle">{item.phase}</span>
-                  <span
-                    className={`ml-auto text-xs font-mono font-bold px-2 py-0.5 rounded-full ${item.bg} border ${item.border}`}
-                    style={{ color: item.color }}
-                  >
-                    {item.label}
-                  </span>
-                </div>
-
-                <h3 className="font-display font-bold text-lg text-foreground mb-1">{item.title}</h3>
-                <p className="font-mono text-xs mb-4" style={{ color: item.color }}>{item.quarter}</p>
-
-                <div className="flex items-center gap-2 mb-4">
-                  <div className={`w-2 h-2 rounded-full ${item.status === "done" ? "bg-risk-safe animate-pulse" : item.status === "in-progress" ? "bg-primary animate-pulse" : "bg-border"}`} />
-                  <div className="flex-1 h-px bg-border-bright" />
-                </div>
-
-                <ul className="space-y-2">
-                  {item.items.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-xs text-foreground-muted">
-                      <div
-                        className={`w-1 h-1 rounded-full flex-shrink-0 mt-1.5 ${
-                          item.status === "done" ? "bg-risk-safe" : item.status === "in-progress" ? "bg-primary" : "bg-foreground-subtle"
-                        }`}
-                      />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
+          {items.map((item, i) => <RoadmapCard key={item.phase} item={item} delay={i * 100} />)}
         </div>
       </div>
     </section>

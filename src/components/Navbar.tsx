@@ -1,49 +1,74 @@
 import { useState, useEffect } from "react";
 import logoIcon from "@/assets/logo-icon.png";
 
+const SECTIONS = ["problem", "solution", "demo", "how-it-works", "roadmap", "team"];
+
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [active, setActive] = useState("");
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", onScroll);
+    const onScroll = () => {
+      setScrolled(window.scrollY > 40);
+      // Track active section
+      let current = "";
+      for (const id of SECTIONS) {
+        const el = document.getElementById(id);
+        if (el && window.scrollY >= el.offsetTop - 120) current = id;
+      }
+      setActive(current);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   const links = [
-    { label: "Problem", href: "#problem" },
-    { label: "Solution", href: "#solution" },
-    { label: "Demo", href: "#demo" },
-    { label: "How It Works", href: "#how-it-works" },
-    { label: "Roadmap", href: "#roadmap" },
-    { label: "Team", href: "#team" },
+    { label: "Problem", href: "#problem", id: "problem" },
+    { label: "Solution", href: "#solution", id: "solution" },
+    { label: "Demo", href: "#demo", id: "demo" },
+    { label: "How It Works", href: "#how-it-works", id: "how-it-works" },
+    { label: "Roadmap", href: "#roadmap", id: "roadmap" },
+    { label: "Team", href: "#team", id: "team" },
   ];
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? "bg-background/90 backdrop-blur-md border-b border-border" : "bg-transparent"
+      className={`fixed top-0.5 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? "bg-background/90 backdrop-blur-md border-b border-border shadow-lg"
+          : "bg-transparent"
       }`}
     >
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
         {/* Logo */}
         <a href="#" className="flex items-center gap-2.5 group">
-          <img src={logoIcon} alt="The Risk Oracle" className="w-8 h-8 group-hover:scale-110 transition-transform" />
+          <img
+            src={logoIcon}
+            alt="The Risk Oracle"
+            className="w-8 h-8 group-hover:scale-110 transition-transform duration-200"
+          />
           <span className="font-display font-bold text-lg text-foreground">
             The Risk <span className="text-gradient">Oracle</span>
           </span>
         </a>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-6">
+        <nav className="hidden md:flex items-center gap-1">
           {links.map((l) => (
             <a
               key={l.label}
               href={l.href}
-              className="text-sm text-foreground-muted hover:text-foreground transition-colors font-medium"
+              className={`relative text-sm px-3 py-1.5 rounded-lg font-medium transition-all duration-200 ${
+                active === l.id
+                  ? "text-primary bg-primary/10"
+                  : "text-foreground-muted hover:text-foreground hover:bg-surface-highlight"
+              }`}
             >
               {l.label}
+              {active === l.id && (
+                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
+              )}
             </a>
           ))}
         </nav>
@@ -63,7 +88,11 @@ export default function Navbar() {
         </div>
 
         {/* Mobile hamburger */}
-        <button onClick={() => setOpen(!open)} className="md:hidden p-2 text-foreground-muted">
+        <button
+          onClick={() => setOpen(!open)}
+          className="md:hidden p-2 rounded-lg text-foreground-muted hover:text-foreground hover:bg-surface-highlight transition-colors"
+          aria-label="Toggle menu"
+        >
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             {open ? (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -76,18 +105,24 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {open && (
-        <div className="md:hidden bg-surface border-t border-border px-4 py-4 flex flex-col gap-4">
+        <div className="md:hidden bg-surface/95 backdrop-blur-md border-t border-border px-4 py-4 flex flex-col gap-1 shadow-xl">
           {links.map((l) => (
             <a
               key={l.label}
               href={l.href}
               onClick={() => setOpen(false)}
-              className="text-foreground-muted hover:text-foreground transition-colors font-medium"
+              className={`px-3 py-2.5 rounded-lg font-medium transition-colors ${
+                active === l.id
+                  ? "text-primary bg-primary/10"
+                  : "text-foreground-muted hover:text-foreground hover:bg-surface-highlight"
+              }`}
             >
               {l.label}
             </a>
           ))}
-          <a href="#demo" className="btn-primary px-4 py-2 text-sm rounded-lg text-center">Try Demo</a>
+          <a href="#demo" className="btn-primary px-4 py-2.5 text-sm rounded-lg text-center mt-2">
+            Try Demo
+          </a>
         </div>
       )}
     </header>

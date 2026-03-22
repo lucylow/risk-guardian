@@ -1,18 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 
 function StatCard({ value, label, detail, color }: { value: string; label: string; detail: string; color: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const obs = new IntersectionObserver(([e]) => e.isIntersecting && setVisible(true), { threshold: 0.3 });
-    if (ref.current) obs.observe(ref.current);
-    return () => obs.disconnect();
-  }, []);
+  const { ref, visible } = useScrollReveal(0.2);
 
   return (
-    <div ref={ref} className={`glass-card p-6 transition-all duration-700 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
-      <div className={`font-display font-bold text-4xl mb-2`} style={{ color }}>{value}</div>
+    <div ref={ref} className={`glass-card p-6 transition-all duration-700 hover:scale-[1.02] ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
+      <div className="font-display font-bold text-4xl mb-2" style={{ color }}>{value}</div>
       <div className="font-semibold text-foreground mb-1">{label}</div>
       <div className="text-sm text-foreground-muted">{detail}</div>
     </div>
@@ -21,11 +15,13 @@ function StatCard({ value, label, detail, color }: { value: string; label: strin
 
 function AttackDiagram() {
   const [step, setStep] = useState(0);
+  const { ref, visible } = useScrollReveal(0.2);
 
   useEffect(() => {
+    if (!visible) return;
     const t = setInterval(() => setStep(s => (s + 1) % 4), 1800);
     return () => clearInterval(t);
-  }, []);
+  }, [visible]);
 
   const steps = [
     { label: "Your TX enters mempool", icon: "📤", active: step >= 0 },
@@ -35,7 +31,7 @@ function AttackDiagram() {
   ];
 
   return (
-    <div className="glass-card p-6 rounded-2xl">
+    <div ref={ref} className={`glass-card p-6 rounded-2xl transition-all duration-700 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
       <div className="flex items-center gap-2 mb-4">
         <div className="w-2 h-2 rounded-full bg-risk-danger animate-pulse" />
         <span className="font-mono text-xs text-foreground-muted">SANDWICH ATTACK — LIVE SIMULATION</span>
@@ -73,11 +69,15 @@ function AttackDiagram() {
 }
 
 export default function ProblemSection() {
+  const { ref: headerRef, visible: headerVisible } = useScrollReveal(0.2);
+
   return (
     <section id="problem" className="py-24 relative hex-bg">
       <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="text-center mb-16">
+        <div
+          ref={headerRef}
+          className={`text-center mb-16 transition-all duration-700 ${headerVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+        >
           <div className="section-label mb-4">The Problem</div>
           <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4">
             DeFi is a{" "}
@@ -92,66 +92,21 @@ export default function ProblemSection() {
           {/* Left — stats */}
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
-              <StatCard
-                value="$1.4B+"
-                label="MEV Extracted Per Year"
-                detail="Sandwich attacks, front-running, and arbitrage bots drain value from DeFi users annually."
-                color="hsl(var(--risk-danger))"
-              />
-              <StatCard
-                value="~30%"
-                label="Of Transactions Affected"
-                detail="Nearly a third of all on-chain swaps experience some form of MEV extraction."
-                color="hsl(var(--risk-moderate))"
-              />
-              <StatCard
-                value="$7.7B"
-                label="Lost to Rug Pulls (2021-23)"
-                detail="Shallow liquidity pools and malicious tokens continue to drain retail investors."
-                color="hsl(var(--risk-danger))"
-              />
-              <StatCard
-                value="0.001s"
-                label="Bot Reaction Time"
-                detail="MEV bots respond to mempool activity faster than any human can — you need AI protection."
-                color="hsl(var(--risk-moderate))"
-              />
+              <StatCard value="$1.4B+" label="MEV Extracted Per Year" detail="Sandwich attacks, front-running, and arbitrage bots drain value from DeFi users annually." color="hsl(var(--risk-danger))" />
+              <StatCard value="~30%" label="Of Transactions Affected" detail="Nearly a third of all on-chain swaps experience some form of MEV extraction." color="hsl(var(--risk-moderate))" />
+              <StatCard value="$7.7B" label="Lost to Rug Pulls (2021-23)" detail="Shallow liquidity pools and malicious tokens continue to drain retail investors." color="hsl(var(--risk-danger))" />
+              <StatCard value="0.001s" label="Bot Reaction Time" detail="MEV bots respond to mempool activity faster than any human can — you need AI protection." color="hsl(var(--risk-moderate))" />
             </div>
 
-            {/* Risk categories */}
             <div className="glass-card p-6">
               <h3 className="font-display font-semibold text-foreground mb-4">The Three Threat Vectors</h3>
               <div className="space-y-4">
                 {[
-                  {
-                    icon: "👁️",
-                    title: "Sandwich Attacks",
-                    desc: "Bots front-run your transaction by buying just before and selling just after, pocketing the difference.",
-                    risk: "HIGH",
-                    color: "text-risk-danger",
-                    bg: "bg-risk-danger/10",
-                    border: "border-risk-danger/20",
-                  },
-                  {
-                    icon: "💧",
-                    title: "Liquidity Pool Traps",
-                    desc: "Shallow pools mean a single large swap can move the price dramatically — or drain entirely.",
-                    risk: "MED",
-                    color: "text-risk-moderate",
-                    bg: "bg-risk-moderate/10",
-                    border: "border-risk-moderate/20",
-                  },
-                  {
-                    icon: "🎭",
-                    title: "Malicious Wallet Patterns",
-                    desc: "Honeypot contracts and known scam wallets that appear legitimate until it's too late.",
-                    risk: "HIGH",
-                    color: "text-risk-danger",
-                    bg: "bg-risk-danger/10",
-                    border: "border-risk-danger/20",
-                  },
+                  { icon: "👁️", title: "Sandwich Attacks", desc: "Bots front-run your transaction by buying just before and selling just after, pocketing the difference.", risk: "HIGH", color: "text-risk-danger", bg: "bg-risk-danger/10", border: "border-risk-danger/20" },
+                  { icon: "💧", title: "Liquidity Pool Traps", desc: "Shallow pools mean a single large swap can move the price dramatically — or drain entirely.", risk: "MED", color: "text-risk-moderate", bg: "bg-risk-moderate/10", border: "border-risk-moderate/20" },
+                  { icon: "🎭", title: "Malicious Wallet Patterns", desc: "Honeypot contracts and known scam wallets that appear legitimate until it's too late.", risk: "HIGH", color: "text-risk-danger", bg: "bg-risk-danger/10", border: "border-risk-danger/20" },
                 ].map((item) => (
-                  <div key={item.title} className={`flex gap-4 p-3 rounded-lg ${item.bg} border ${item.border}`}>
+                  <div key={item.title} className={`flex gap-4 p-3 rounded-lg ${item.bg} border ${item.border} hover:scale-[1.01] transition-transform duration-200`}>
                     <span className="text-2xl">{item.icon}</span>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">

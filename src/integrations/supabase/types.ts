@@ -14,7 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      risk_assessments: {
+        Row: {
+          amount_in: number
+          created_at: string
+          explanation: string | null
+          id: string
+          liquidity_health: number
+          recommendation: string | null
+          safety_score: number
+          sandwich_risk: number
+          token_in: string
+          token_out: string
+          user_address: string
+          wallet_risk: number
+        }
+        Insert: {
+          amount_in: number
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          liquidity_health: number
+          recommendation?: string | null
+          safety_score: number
+          sandwich_risk: number
+          token_in: string
+          token_out: string
+          user_address: string
+          wallet_risk: number
+        }
+        Update: {
+          amount_in?: number
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          liquidity_health?: number
+          recommendation?: string | null
+          safety_score?: number
+          sandwich_risk?: number
+          token_in?: string
+          token_out?: string
+          user_address?: string
+          wallet_risk?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -20,6 +20,8 @@ class Settings(BaseSettings):
 
     # Security
     SECRET_KEY: str = "change_this_in_production"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    ENFORCE_HTTPS_REDIRECT: bool = False
 
     # AI Models
     SANDWICH_MODEL_PATH: str = "models/sandwich_xgb.joblib"
@@ -28,9 +30,12 @@ class Settings(BaseSettings):
 
     # Caching
     FEATURE_CACHE_TTL: int = 60
+    RISK_ASSESSMENT_CACHE_TTL: int = 30
+    REDIS_URL: str = "redis://localhost:6379/0"
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 
 settings = Settings()

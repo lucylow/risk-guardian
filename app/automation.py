@@ -10,6 +10,15 @@ from .websocket import manager
 logger = logging.getLogger(__name__)
 monitor_queue: asyncio.Queue[Dict[str, Any]] = asyncio.Queue()
 
+try:
+    from .celery_worker import send_alert
+except Exception:
+    class _NoOpAlertTask:
+        def delay(self, *_args, **_kwargs):
+            return None
+
+    send_alert = _NoOpAlertTask()
+
 
 async def add_transaction_to_monitor(tx_data: Dict[str, Any]):
     await monitor_queue.put(tx_data)
@@ -52,6 +61,15 @@ async def automation_worker():
                     await flashbots.send_private_transaction(tx["signed_tx"])
 
                 if settings.notify_on_high_risk:
+                    send_alert.delay(
+                        user_address,
+                        {
+                            "type": "high_risk_alert",
+                            "safety_score": safety_score,
+                            "risk_breakdown": risk_data["factors"],
+                            "recommendation": risk_data["recommendation"],
+                        },
+                    )
                     await manager.send_personal_message(
                         {
                             "type": "high_risk_alert",

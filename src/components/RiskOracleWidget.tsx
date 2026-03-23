@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import RiskGauge from "./RiskGauge";
 import RiskBreakdown, { BreakdownData } from "./RiskBreakdown";
-import { assessRisk } from "@/services/riskOracle";
+import AlternativeSuggestions from "./AlternativeSuggestions";
+import { assessRisk, type RiskRequest } from "@/services/riskOracle";
+import { useRiskWebSocket } from "@/hooks/useRiskWebSocket";
 import { isMockModeEnabled } from "@/lib/mockMode";
 
 export interface RiskData {
@@ -57,6 +59,15 @@ export default function RiskOracleWidget({
   const [result,    setResult]    = useState<RiskData | null>(null);
   const [loading,   setLoading]   = useState(false);
   const [apiStatus, setApiStatus] = useState<"live" | "offline" | "checking">("checking");
+  const [whatIfAmount, setWhatIfAmount] = useState(initialAmount);
+  const [whatIfRisk, setWhatIfRisk] = useState<RiskData | null>(null);
+  const [simulating, setSimulating] = useState(false);
+  const wsUpdate = useRiskWebSocket("0xdemo_user");
+
+  useEffect(() => {
+    setWhatIfAmount(amount);
+    setWhatIfRisk(null);
+  }, [amount]);
 
   const assess = async () => {
     setLoading(true);
@@ -85,6 +96,30 @@ export default function RiskOracleWidget({
 
   // Auto-run on initial mount
   useEffect(() => { assess(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (whatIfAmount === amount) return;
+    const timer = setTimeout(async () => {
+      setSimulating(true);
+      try {
+        const [tokenIn = "ONE", tokenOut = "USDC"] = pair.split("_");
+        const data = await assessRisk({
+          user_address: "0xdemo_user",
+          token_in: tokenIn,
+          token_out: tokenOut,
+          amount_in: whatIfAmount,
+          signature: "demo_signature",
+          nonce: String(Date.now()),
+        });
+        setWhatIfRisk(data);
+      } catch (err) {
+        console.error("What-if simulation failed", err);
+      } finally {
+        setSimulating(false);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [whatIfAmount, amount, pair]);
 
   const recTypeCls = result
     ? result.recommendation_type === "safe"
@@ -218,6 +253,16 @@ export default function RiskOracleWidget({
           {/* Breakdown bars */}
           <RiskBreakdown data={result?.risk_breakdown ?? null} loading={loading} />
 
+          {wsUpdate && (
+            <div className="p-3 rounded-xl border border-risk-moderate/30 bg-risk-moderate/10">
+              <p className="text-xs font-mono text-risk-moderate mb-1">LIVE UPDATE</p>
+              <p className="text-sm text-foreground-muted">
+                New risk signal detected.
+                {typeof wsUpdate.safety_score === "number" ? ` Safety now ${wsUpdate.safety_score}.` : ""}
+              </p>
+            </div>
+          )}
+
           {/* AI Explanation */}
           <div className="p-4 rounded-xl bg-surface-raised border border-border">
             <p className="text-xs font-mono text-foreground-muted mb-1.5">💡 AI EXPLANATION</p>
@@ -226,7 +271,63 @@ export default function RiskOracleWidget({
                 ? "Scanning mempool and analyzing pool data…"
                 : result?.explanation ?? "Select parameters and click Assess Risk."}
             </p>
+            {result && !loading && (
+              <p className="text-xs text-foreground-subtle mt-2">
+                Decision assistant:{" "}
+                {result.safety_score >= 70
+                  ? "Proceed; current setup appears stable."
+                  : result.safety_score >= 40
+                    ? "Caution: reduce size or wait for lower congestion."
+                    : "High risk: use alternatives before submitting this swap."}
+              </p>
+            )}
           </div>
+
+          <div className="p-4 rounded-xl bg-surface-raised border border-border">
+            <p className="text-xs font-mono text-foreground-muted mb-1.5">WHAT-IF SIMULATOR</p>
+            <label className="block text-sm text-foreground-muted">
+              Try different amount: <span className="font-mono text-primary">{whatIfAmount.toFixed(2)}</span>
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={Math.max(100, amount * 2)}
+              step={Math.max(1, amount / 20)}
+              value={whatIfAmount}
+              onChange={(e) => setWhatIfAmount(Number(e.target.value))}
+              className="w-full mt-2"
+              style={{ accentColor: "hsl(var(--primary))" }}
+            />
+            <div className="flex justify-between text-xs text-foreground-subtle mt-1">
+              <span>0</span>
+              <span>{whatIfAmount.toFixed(2)}</span>
+              <span>{(amount * 2).toFixed(2)}</span>
+            </div>
+            {simulating && <p className="text-xs text-foreground-subtle mt-2">Recalculating...</p>}
+            {whatIfRisk && !simulating && (
+              <p className="text-xs text-foreground-muted mt-2">
+                Simulated safety: <span className="font-mono text-primary">{whatIfRisk.safety_score}</span> —{" "}
+                {whatIfRisk.recommendation}
+              </p>
+            )}
+          </div>
+
+          <AlternativeSuggestions
+            request={{
+              user_address: "0xdemo_user",
+              token_in: pair.split("_")[0] ?? "ONE",
+              token_out: pair.split("_")[1] ?? "USDC",
+              amount_in: amount,
+              signature: "demo_signature",
+              nonce: "demo_nonce",
+            } satisfies RiskRequest}
+            onSelect={(suggestion) => {
+              if (typeof suggestion.amount === "number") {
+                setAmount(suggestion.amount);
+                setWhatIfAmount(suggestion.amount);
+              }
+            }}
+          />
 
           {/* Recommendation */}
           {result && !loading && (

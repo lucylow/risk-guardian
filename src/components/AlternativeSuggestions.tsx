@@ -39,7 +39,12 @@ export default function AlternativeSuggestions({
     return () => {
       active = false;
     };
-  }, [request]);
+  }, [
+    request.user_address,
+    request.token_in,
+    request.token_out,
+    request.amount_in,
+  ]);
 
   if (loading) {
     return <p className="text-xs text-foreground-subtle">Loading safer alternatives...</p>;

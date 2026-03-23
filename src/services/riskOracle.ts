@@ -38,8 +38,44 @@ export interface SuggestResponse {
   suggestions: Suggestion[];
 }
 
+const AUTH_TOKEN_KEY = "risk_oracle_token";
+
+export function setRiskOracleToken(token: string): void {
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+}
+
+export function getRiskOracleToken(): string | null {
+  return localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+async function authFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const token = getRiskOracleToken();
+  const headers = new Headers(init.headers ?? {});
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  return fetch(input, { ...init, headers });
+}
+
 function pairFromRequest(request: RiskRequest): string {
   return `${request.token_in}_${request.token_out}`.toUpperCase();
+}
+
+export async function loginWithOneWallet(payload: {
+  address: string;
+  signature: string;
+  nonce: string;
+}): Promise<void> {
+  const response = await fetch("/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(`Login failed: ${response.status}`);
+  }
+  const data = (await response.json()) as { access_token: string };
+  setRiskOracleToken(data.access_token);
 }
 
 export async function assessRisk(request: RiskRequest): Promise<RiskResponse> {
@@ -113,7 +149,7 @@ export async function getSwapSuggestions(
     return { adaptive_threshold: 50, suggestions };
   }
 
-  const response = await fetch("/suggest", {
+  const response = await authFetch("/suggest", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(request),
@@ -132,7 +168,7 @@ export async function logSuggestionFeedback(params: {
   accepted: boolean;
 }): Promise<void> {
   if (isMockModeEnabled()) return;
-  await fetch("/suggestion-feedback", {
+  await authFetch("/suggestion-feedback", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),

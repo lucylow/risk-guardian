@@ -4,14 +4,24 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from . import database, models
-from .dependencies import get_current_user_address
+from .auth import get_current_user
 from .models import UserSettingsResponse, UserSettingsUpdate
 
 router = APIRouter(prefix="/settings", tags=["User Settings"])
 
 
 @router.get("/{user_address}", response_model=UserSettingsResponse)
-def get_settings(user_address: str, db: Session = Depends(database.get_db)):
+def get_settings(
+    user_address: str,
+    db: Session = Depends(database.get_db),
+    caller_address: str = Depends(get_current_user),
+):
+    if caller_address.lower() != user_address.lower():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot view another user's settings",
+        )
+
     settings = (
         db.query(models.UserSettings)
         .filter(models.UserSettings.user_address == user_address)
@@ -36,7 +46,7 @@ def create_or_update_settings(
     user_address: str,
     settings_data: UserSettingsUpdate,
     db: Session = Depends(database.get_db),
-    caller_address: str = Depends(get_current_user_address),
+    caller_address: str = Depends(get_current_user),
 ):
     if caller_address.lower() != user_address.lower():
         raise HTTPException(

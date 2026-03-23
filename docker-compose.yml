@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  db:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_USER: risk_user
+      POSTGRES_PASSWORD: risk_pass
+      POSTGRES_DB: risk_oracle
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - db
+    environment:
+      DATABASE_URL: postgresql://risk_user:risk_pass@db/risk_oracle
+      REDIS_URL: redis://redis:6379/0
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  celery_worker:
+    build: .
+    depends_on:
+      - redis
+      - db
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql://risk_user:risk_pass@db/risk_oracle
+    command: celery -A app.celery_worker.celery_app worker --loglevel=info
+
+volumes:
+  postgres_data:

@@ -54,7 +54,13 @@ export default function RiskGauge({ score, size = "lg", loading = false }: RiskG
     <div className="flex flex-col items-center gap-2">
       <div className={`relative ${cls.container}`}>
         {/* Track */}
-        <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+        <svg
+          className="w-full h-full -rotate-90"
+          viewBox="0 0 100 100"
+          role="img"
+          aria-label={`Safety score gauge${score !== null ? `: ${score} out of 100` : ""}`}
+        >
+          <title>{`Safety score: ${score ?? 0} out of 100`}</title>
           <circle
             cx="50" cy="50" r="45"
             fill="none"

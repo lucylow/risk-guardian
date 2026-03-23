@@ -9,144 +9,186 @@ const corsHeaders = {
 // ─── Data Ingestion (mock of OneChain sources) ───────────────────────────────
 
 function getMempoolSnapshot(pair: string) {
-  // Simulate pending tx count based on pair volatility
   const pairRisk: Record<string, number> = {
-    ONE_USDC: 8,
-    ONE_BTC: 6,
-    USDC_ONE: 12,
-    ONE_ETH: 18,
-    HIGH_RISK_PAIR: 42,
+    ONE_USDC: 8, ONE_BTC: 6, USDC_ONE: 12, ONE_ETH: 18, HIGH_RISK_PAIR: 42,
   };
   const base = pairRisk[pair] ?? 10;
   const pending_count = base + Math.floor(Math.random() * 10);
-  return { pending_count };
+  const gas_price_percentile = 40 + Math.random() * 80;
+  const gas_price_std = 5 + Math.random() * 30;
+  return { pending_count, gas_price_percentile, gas_price_std };
 }
 
 function getPoolHealth(pair: string) {
-  const poolData: Record<string, { liquidity_usd: number; lp_concentration: number }> = {
-    ONE_USDC:       { liquidity_usd: 8_500_000, lp_concentration: 0.18 },
-    ONE_BTC:        { liquidity_usd: 4_200_000, lp_concentration: 0.22 },
-    USDC_ONE:       { liquidity_usd: 8_500_000, lp_concentration: 0.18 },
-    ONE_ETH:        { liquidity_usd: 2_100_000, lp_concentration: 0.35 },
-    HIGH_RISK_PAIR: { liquidity_usd:    85_000, lp_concentration: 0.82 },
+  const poolData: Record<string, { liquidity_usd: number; lp_concentration: number; volume_24h: number }> = {
+    ONE_USDC:       { liquidity_usd: 8_500_000, lp_concentration: 0.18, volume_24h: 3_200_000 },
+    ONE_BTC:        { liquidity_usd: 4_200_000, lp_concentration: 0.22, volume_24h: 1_800_000 },
+    USDC_ONE:       { liquidity_usd: 8_500_000, lp_concentration: 0.18, volume_24h: 3_200_000 },
+    ONE_ETH:        { liquidity_usd: 2_100_000, lp_concentration: 0.35, volume_24h:   900_000 },
+    HIGH_RISK_PAIR: { liquidity_usd:    85_000, lp_concentration: 0.82, volume_24h:    12_000 },
   };
-  return poolData[pair] ?? { liquidity_usd: 1_000_000, lp_concentration: 0.3 };
+  return poolData[pair] ?? { liquidity_usd: 1_000_000, lp_concentration: 0.3, volume_24h: 500_000 };
 }
 
 function getWalletReputation(wallet: string) {
-  // wallet parameter is "normal" | "new" | "suspicious" for demo
-  if (wallet === "suspicious") return { score: 12, flags: ["suspicious_activity"] };
-  if (wallet === "new")        return { score: 50, flags: ["new_wallet"] };
-  return { score: 88, flags: [] };
+  if (wallet === "suspicious") return { score: 12, flags: ["suspicious_activity"], tx_count: 3, age_days: 2 };
+  if (wallet === "new")        return { score: 50, flags: ["new_wallet"],          tx_count: 1, age_days: 0 };
+  return                              { score: 88, flags: [],                      tx_count: 340, age_days: 420 };
 }
 
-// ─── AI Model Stubs ──────────────────────────────────────────────────────────
+// ─── Quantitative Risk Models (ML-style heuristics with feature engineering) ──
 
-function detectSandwichRisk(pair: string, amount: number): number {
+function detectSandwichRisk(pair: string, amount: number): { score: number; features: Record<string, number> } {
   const mempool = getMempoolSnapshot(pair);
   let risk = 10;
   if (mempool.pending_count > 30) risk += 35;
   else if (mempool.pending_count > 15) risk += 20;
   else if (mempool.pending_count > 8)  risk += 8;
   const amountFactor = Math.min(amount / 5000, 1) * 25;
-  return Math.min(100, Math.round(risk + amountFactor));
+  const gasFactor    = mempool.gas_price_std > 20 ? 5 : 0;
+  const score = Math.min(100, Math.round(risk + amountFactor + gasFactor));
+  return { score, features: { ...mempool, amount_usd: amount, amount_factor: Math.round(amountFactor) } };
 }
 
-function assessLiquidityHealth(pair: string, amount: number): number {
+function assessLiquidityHealth(pair: string, amount: number): { score: number; features: Record<string, number> } {
   const pool = getPoolHealth(pair);
   let health = 50;
   if (pool.liquidity_usd > 3_000_000) health += 25;
   else if (pool.liquidity_usd > 500_000) health += 10;
   if (pool.lp_concentration < 0.25) health += 20;
   else if (pool.lp_concentration > 0.6) health -= 25;
+  if (pool.volume_24h > 1_000_000) health += 5;
   const amountFactor = Math.min(amount / 5000, 1) * 15;
-  return Math.max(0, Math.min(100, Math.round(health - amountFactor)));
+  const score = Math.max(0, Math.min(100, Math.round(health - amountFactor)));
+  return { score, features: { ...pool, amount_usd: amount, amount_impact: Math.round(amountFactor) } };
 }
 
-function assessWalletRisk(wallet: string): number {
+function assessWalletRisk(wallet: string): { score: number; features: Record<string, number | string[]> } {
   const rep = getWalletReputation(wallet);
-  return Math.max(0, Math.min(100, 100 - rep.score));
+  const score = Math.max(0, Math.min(100, 100 - rep.score));
+  return { score, features: { reputation_score: rep.score, tx_count: rep.tx_count, age_days: rep.age_days, flags: rep.flags } };
 }
 
-// ─── Risk Engine (matches Python FastAPI logic) ───────────────────────────────
+// ─── Compute raw scores ───────────────────────────────────────────────────────
 
-function computeRiskScore(pair: string, amount: number, wallet: string) {
+function computeRawScores(pair: string, amount: number, wallet: string) {
   const sandwich  = detectSandwichRisk(pair, amount);
   const liquidity = assessLiquidityHealth(pair, amount);
-  const walletRisk = assessWalletRisk(wallet);
+  const walletR   = assessWalletRisk(wallet);
+  const liquidityRisk = 100 - liquidity.score;
+  const totalRisk     = 0.5 * sandwich.score + 0.3 * liquidityRisk + 0.2 * walletR.score;
+  const safetyScore   = Math.max(0, Math.min(100, Math.round(100 - totalRisk)));
+  const tier = safetyScore >= 70 ? "safe" : safetyScore >= 40 ? "moderate" : "danger";
+  return { safetyScore, sandwich, liquidity, walletR, tier } as const;
+}
 
-  // Weighted safety score: sandwich 0.5, liquidity_risk 0.3, wallet 0.2
-  const liquidityRisk = 100 - liquidity;
-  const totalRisk = 0.5 * sandwich + 0.3 * liquidityRisk + 0.2 * walletRisk;
-  const safetyScore = Math.max(0, Math.min(100, Math.round(100 - totalRisk)));
+// ─── LLM-powered explanation via Lovable AI Gateway ──────────────────────────
 
-  // Explanation
+async function generateAIExplanation(
+  pair: string,
+  amount: number,
+  wallet: string,
+  scores: ReturnType<typeof computeRawScores>
+): Promise<{ explanation: string; recommendation: string }> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+  const systemPrompt = `You are The Risk Oracle, an expert DeFi risk analyst embedded in OneDEX.
+Your job: analyze a pending swap and produce a concise, actionable risk explanation and a one-sentence recommendation.
+Guidelines:
+- Explanation: 2-3 sentences. Be specific about the numbers. Explain *why* each component is risky or safe.
+- Recommendation: exactly one sentence starting with an emoji (✅ 🟡 🚨). Be direct and actionable.
+- Tone: technical but user-friendly. No fluff.
+- Use DeFi terminology (MEV, sandwich bots, LP concentration, price impact, slippage).`;
+
+  const userPrompt = `Swap analysis request:
+- Token pair: ${pair}
+- Swap amount: ${amount} ONE (~$${amount} USD equivalent)
+- Wallet profile: ${wallet} (OneID reputation score: ${(scores.walletR.features as any).reputation_score}/100)
+- Wallet tx history: ${(scores.walletR.features as any).tx_count} transactions, ${(scores.walletR.features as any).age_days} days old
+
+Quantitative risk scores (0-100 scale):
+- Safety Score: ${scores.safetyScore}/100 (tier: ${scores.tier})
+- Sandwich Attack Risk: ${scores.sandwich.score}/100
+  - Pending txs in mempool: ${(scores.sandwich.features as any).pending_count}
+  - Gas price volatility (std): ${Math.round((scores.sandwich.features as any).gas_price_std)}
+  - Amount impact factor: +${(scores.sandwich.features as any).amount_factor}pts
+- Liquidity Health: ${scores.liquidity.score}/100
+  - Pool TVL: $${((scores.liquidity.features as any).liquidity_usd / 1_000_000).toFixed(2)}M
+  - LP concentration (Gini): ${(scores.liquidity.features as any).lp_concentration}
+  - 24h volume: $${Math.round((scores.liquidity.features as any).volume_24h / 1000)}K
+- Wallet Risk: ${scores.walletR.score}/100
+  - Flags: ${JSON.stringify((scores.walletR.features as any).flags)}
+
+Respond with a JSON object with exactly two keys: "explanation" (string) and "recommendation" (string).`;
+
+  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user",   content: userPrompt   },
+      ],
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  if (resp.status === 429) throw new Error("RATE_LIMITED");
+  if (resp.status === 402) throw new Error("PAYMENT_REQUIRED");
+  if (!resp.ok) throw new Error(`AI gateway error: ${resp.status}`);
+
+  const data = await resp.json();
+  const content = data.choices?.[0]?.message?.content ?? "{}";
+  const parsed = JSON.parse(content);
+  return {
+    explanation:    parsed.explanation    ?? "",
+    recommendation: parsed.recommendation ?? "",
+  };
+}
+
+// ─── Fallback rule-based explanation (if AI fails) ───────────────────────────
+
+function ruleBasedExplanation(scores: ReturnType<typeof computeRawScores>) {
   let explanation = "";
-  if (sandwich > 40)       explanation += "⚡ High sandwich probability: 3+ pending txs in mempool targeting this pair with higher gas. ";
-  else if (sandwich > 20)  explanation += "⚠ Moderate sandwich risk — some bot activity detected in the mempool. ";
-  else                     explanation += "✓ Sandwich risk is low — mempool looks clean for this pair. ";
-
-  if (liquidity < 50)      explanation += "💧 Pool is shallow — your trade will cause significant price impact. ";
-  else if (liquidity < 70) explanation += "💧 Pool health is moderate; acceptable but monitor slippage. ";
-  else                     explanation += "💧 Pool has deep liquidity — price impact will be minimal. ";
-
-  const rep = getWalletReputation(wallet);
-  if (rep.score < 30)      explanation += "🔴 Wallet flagged by OneID for suspicious on-chain activity.";
-  else if (rep.score < 65) explanation += "🟡 Limited wallet history — no flags but verify contract addresses.";
+  if (scores.sandwich.score > 40)       explanation += "⚡ High sandwich probability: elevated mempool activity targeting this pair. ";
+  else if (scores.sandwich.score > 20)  explanation += "⚠ Moderate sandwich risk — some bot activity detected. ";
+  else                                  explanation += "✓ Sandwich risk is low — mempool looks clean. ";
+  if (scores.liquidity.score < 50)      explanation += "💧 Pool is shallow — your trade will cause significant price impact. ";
+  else if (scores.liquidity.score < 70) explanation += "💧 Pool health is moderate; monitor slippage. ";
+  else                                  explanation += "💧 Pool has deep liquidity — price impact minimal. ";
+  const repScore = (scores.walletR.features as any).reputation_score;
+  if (repScore < 30)       explanation += "🔴 Wallet flagged by OneID for suspicious on-chain activity.";
+  else if (repScore < 65)  explanation += "🟡 Limited wallet history — no flags but verify contract addresses.";
   else                     explanation += "✅ Wallet reputation is clean per OneID.";
 
-  // Recommendation
-  let recommendation: string;
-  let recommendationType: "safe" | "moderate" | "danger";
-  if (safetyScore < 30) {
-    recommendation = "Do NOT proceed — extremely high risk. Consider a different pair or a much smaller amount.";
-    recommendationType = "danger";
-  } else if (safetyScore < 60) {
-    recommendation = "Proceed with caution. Consider reducing your swap size or increasing slippage tolerance to mitigate risk.";
-    recommendationType = "moderate";
-  } else {
-    recommendation = "Low risk — safe to swap. Always double-check the token contract address before confirming.";
-    recommendationType = "safe";
-  }
-
-  return {
-    safety_score: safetyScore,
-    risk_breakdown: {
-      sandwich_risk: sandwich,
-      liquidity_health: liquidity,
-      wallet_risk: walletRisk,
-    },
-    explanation,
-    recommendation,
-    recommendation_type: recommendationType,
-  };
+  const recommendation =
+    scores.tier === "danger"   ? "🚨 Do NOT proceed — extremely high risk. Consider a different pair or smaller amount." :
+    scores.tier === "moderate" ? "🟡 Proceed with caution — reduce swap size or increase slippage tolerance." :
+                                 "✅ Low risk — safe to swap. Always double-check the token contract address.";
+  return { explanation, recommendation };
 }
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  // Health check
   if (req.method === "GET") {
     return new Response(
-      JSON.stringify({ status: "ok", version: "1.0.0", service: "Risk Oracle API" }),
+      JSON.stringify({ status: "ok", version: "2.0.0", service: "Risk Oracle API", ai: "Lovable AI Gateway" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 
   try {
     const body = await req.json();
-    const {
-      pair = "ONE_USDC",
-      amount = 1000,
-      wallet = "normal",
-      user_address = "0xdemo",
-    } = body;
+    const { pair = "ONE_USDC", amount = 1000, wallet = "normal", user_address = "0xdemo" } = body;
 
-    // Validate inputs
     if (typeof amount !== "number" || amount <= 0) {
       return new Response(
         JSON.stringify({ error: "amount must be a positive number" }),
@@ -154,26 +196,52 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Compute risk
-    const result = computeRiskScore(pair, amount, wallet);
+    // 1. Compute quantitative scores
+    const scores = computeRawScores(pair, amount, wallet);
 
-    // Log to DB (fire and forget — don't block the response)
+    // 2. Generate AI explanation (with fallback)
+    let explanation: string;
+    let recommendation: string;
+    try {
+      const ai = await generateAIExplanation(pair, amount, wallet, scores);
+      explanation    = ai.explanation;
+      recommendation = ai.recommendation;
+    } catch (aiErr: unknown) {
+      const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
+      console.warn("AI explanation failed, using rule-based fallback:", msg);
+      const fallback = ruleBasedExplanation(scores);
+      explanation    = fallback.explanation;
+      recommendation = fallback.recommendation;
+    }
+
+    const result = {
+      safety_score: scores.safetyScore,
+      risk_breakdown: {
+        sandwich_risk:   scores.sandwich.score,
+        liquidity_health: scores.liquidity.score,
+        wallet_risk:      scores.walletR.score,
+      },
+      explanation,
+      recommendation,
+      recommendation_type: scores.tier,
+    };
+
+    // 3. Log to DB (fire and forget)
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
-
     supabase.from("risk_assessments").insert({
       user_address,
-      token_in: pair.split("_")[0] ?? pair,
-      token_out: pair.split("_")[1] ?? "USDC",
-      amount_in: amount,
-      safety_score: result.safety_score,
-      sandwich_risk: result.risk_breakdown.sandwich_risk,
+      token_in:         pair.split("_")[0] ?? pair,
+      token_out:        pair.split("_")[1] ?? "USDC",
+      amount_in:        amount,
+      safety_score:     result.safety_score,
+      sandwich_risk:    result.risk_breakdown.sandwich_risk,
       liquidity_health: result.risk_breakdown.liquidity_health,
-      wallet_risk: result.risk_breakdown.wallet_risk,
-      explanation: result.explanation,
-      recommendation: result.recommendation,
+      wallet_risk:      result.risk_breakdown.wallet_risk,
+      explanation:      result.explanation,
+      recommendation:   result.recommendation,
     }).then(({ error }) => {
       if (error) console.error("DB log error:", error.message);
     });

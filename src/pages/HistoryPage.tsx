@@ -4,9 +4,11 @@ import FooterSection from "@/components/FooterSection";
 import ScrollProgressBar from "@/components/ScrollProgressBar";
 import { supabase } from "@/integrations/supabase/client";
 import { useWallet } from "@/hooks/useWallet";
+import { isMockModeEnabled } from "@/lib/mockMode";
+import { mockHistory } from "@/services/mockApi";
 
 interface HistoryEntry {
-  id: string;
+  id: string | number;
   token_in: string;
   token_out: string;
   amount_in: number;
@@ -41,6 +43,12 @@ export default function HistoryPage() {
     if (!address) return;
     (async () => {
       setLoading(true);
+      if (isMockModeEnabled()) {
+        setHistory(mockHistory);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("risk_assessments")
         .select("*")

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import RiskGauge from "./RiskGauge";
 import RiskBreakdown, { BreakdownData } from "./RiskBreakdown";
+import { assessRisk } from "@/services/riskOracle";
+import { isMockModeEnabled } from "@/lib/mockMode";
 
 export interface RiskData {
   safety_score: number;
@@ -61,13 +62,18 @@ export default function RiskOracleWidget({
     setLoading(true);
     setResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke("risk-assess", {
-        body: { pair, amount, wallet, user_address: "0xdemo_user" },
+      const [tokenIn = "ONE", tokenOut = "USDC"] = pair.split("_");
+      const data = await assessRisk({
+        user_address: "0xdemo_user",
+        token_in: tokenIn,
+        token_out: tokenOut,
+        amount_in: amount,
+        signature: "demo_signature",
+        nonce: String(Date.now()),
       });
-      if (error) throw error;
       const d = data as RiskData;
       setResult(d);
-      setApiStatus("live");
+      setApiStatus(isMockModeEnabled() ? "offline" : "live");
       onResult?.(d);
     } catch (err) {
       console.error("Edge function error:", err);
@@ -185,7 +191,7 @@ export default function RiskOracleWidget({
             }`} />
             <span className="font-mono text-[10px] text-foreground-subtle">
               {apiStatus === "live"    ? "LIVE API — Lovable Cloud Edge Functions" :
-               apiStatus === "offline" ? "API OFFLINE" :
+               apiStatus === "offline" ? "DEMO MODE — Mock Data Active" :
                "CONNECTING…"}
             </span>
           </div>

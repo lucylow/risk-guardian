@@ -12,31 +12,46 @@ import SettingsPage from "./pages/SettingsPage.tsx";
 import HistoryPage from "./pages/HistoryPage.tsx";
 import AboutPage from "./pages/AboutPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import DemoModeToggle from "./components/DemoModeToggle";
+import { isMockModeEnabled, setMockModeEnabled } from "./lib/mockMode";
+import { useState } from "react";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/demo" element={<DemoPage />} />
-          <Route path="/roadmap" element={<RoadmapPage />} />
-          <Route path="/how-it-works" element={<HowItWorksPage />} />
-          <Route path="/integration" element={<IntegrationPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/history" element={<HistoryPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  const [useMock, setUseMock] = useState<boolean>(() => isMockModeEnabled());
+
+  const toggleMock = () => {
+    const next = !useMock;
+    setUseMock(next);
+    setMockModeEnabled(next);
+    window.location.reload();
+  };
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/demo" element={<DemoPage />} />
+            <Route path="/roadmap" element={<RoadmapPage />} />
+            <Route path="/how-it-works" element={<HowItWorksPage />} />
+            <Route path="/integration" element={<IntegrationPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/history" element={<HistoryPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <DemoModeToggle isMock={useMock} onToggle={toggleMock} />
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
 

@@ -3,13 +3,8 @@ import Navbar from "@/components/Navbar";
 import FooterSection from "@/components/FooterSection";
 import ScrollProgressBar from "@/components/ScrollProgressBar";
 import { useWallet } from "@/hooks/useWallet";
-
-interface UserSettings {
-  auto_protect_enabled: boolean;
-  risk_threshold: number;
-  auto_adjust_slippage: boolean;
-  notify_on_high_risk: boolean;
-}
+import { isMockModeEnabled } from "@/lib/mockMode";
+import { mockUserSettings, type UserSettings } from "@/services/mockApi";
 
 const DEFAULT: UserSettings = {
   auto_protect_enabled: true,
@@ -48,7 +43,9 @@ function Toggle({
 
 export default function SettingsPage() {
   const { shortAddress } = useWallet();
-  const [settings, setSettings] = useState<UserSettings>(DEFAULT);
+  const [settings, setSettings] = useState<UserSettings>(
+    isMockModeEnabled() ? mockUserSettings : DEFAULT,
+  );
   const [saved, setSaved] = useState(false);
 
   const update = <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {

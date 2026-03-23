@@ -1,0 +1,140 @@
+import { supabase } from "@/integrations/supabase/client";
+import { isMockModeEnabled } from "@/lib/mockMode";
+import { getMockRisk } from "@/mocks/mockData";
+
+export interface RiskRequest {
+  user_address: string;
+  token_in: string;
+  token_out: string;
+  amount_in: number;
+  signature: string;
+  nonce: string;
+}
+
+export interface RiskBreakdown {
+  sandwich_risk: number;
+  liquidity_health: number;
+  wallet_risk: number;
+}
+
+export interface RiskResponse {
+  safety_score: number;
+  risk_breakdown: RiskBreakdown;
+  explanation: string;
+  recommendation: string;
+  recommendation_type: "safe" | "moderate" | "danger";
+}
+
+export interface Suggestion {
+  type: string;
+  amount?: number;
+  safety_score: number | null;
+  description: string;
+  recommendation: string;
+}
+
+export interface SuggestResponse {
+  adaptive_threshold: number | null;
+  suggestions: Suggestion[];
+}
+
+function pairFromRequest(request: RiskRequest): string {
+  return `${request.token_in}_${request.token_out}`.toUpperCase();
+}
+
+export async function assessRisk(request: RiskRequest): Promise<RiskResponse> {
+  if (isMockModeEnabled()) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const mock = getMockRisk(
+          request.token_in,
+          request.token_out,
+          request.amount_in,
+        );
+        resolve({
+          safety_score: mock.safetyScore,
+          risk_breakdown: {
+            sandwich_risk: mock.sandwichRisk,
+            liquidity_health: mock.liquidityHealth,
+            wallet_risk: mock.walletRisk,
+          },
+          explanation: mock.explanation,
+          recommendation: mock.recommendation,
+          recommendation_type:
+            mock.safetyScore >= 70
+              ? "safe"
+              : mock.safetyScore >= 40
+                ? "moderate"
+                : "danger",
+        });
+      }, 500);
+    });
+  }
+
+  const pair = pairFromRequest(request);
+  const { data, error } = await supabase.functions.invoke("risk-assess", {
+    body: {
+      pair,
+      amount: request.amount_in,
+      wallet: "normal",
+      user_address: request.user_address,
+    },
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data as RiskResponse;
+}
+
+export async function getSwapSuggestions(
+  request: RiskRequest,
+): Promise<SuggestResponse> {
+  if (isMockModeEnabled()) {
+    const base = await assessRisk(request);
+    const suggestions: Suggestion[] = [0.5, 0.25, 0.1].map((f) => {
+      const newAmount = Number((request.amount_in * f).toFixed(2));
+      const safetyBump = Math.min(15, Math.round((1 - f) * 20));
+      return {
+        type: "reduce_amount",
+        amount: newAmount,
+        safety_score: Math.min(99, base.safety_score + safetyBump),
+        description: `Swap ${newAmount} ${request.token_in} instead of ${request.amount_in}`,
+        recommendation: "Smaller trade size lowers sandwich and liquidity impact.",
+      };
+    });
+    suggestions.push({
+      type: "alternative_pool",
+      safety_score: Math.min(99, base.safety_score + 8),
+      description: `Route through deeper ${request.token_out}-${request.token_in} liquidity`,
+      recommendation: "Alternative routing can reduce slippage and MEV pressure.",
+    });
+    return { adaptive_threshold: 50, suggestions };
+  }
+
+  const response = await fetch("/suggest", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) {
+    throw new Error(`Suggestion request failed: ${response.status}`);
+  }
+  return (await response.json()) as SuggestResponse;
+}
+
+export async function logSuggestionFeedback(params: {
+  user_address: string;
+  suggestion_type: string;
+  suggested_params: Record<string, unknown>;
+  safety_score?: number | null;
+  accepted: boolean;
+}): Promise<void> {
+  if (isMockModeEnabled()) return;
+  await fetch("/suggestion-feedback", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+}

@@ -8,6 +8,9 @@ import DemoPage from "./pages/DemoPage.tsx";
 import RoadmapPage from "./pages/RoadmapPage.tsx";
 import HowItWorksPage from "./pages/HowItWorksPage.tsx";
 import IntegrationPage from "./pages/IntegrationPage.tsx";
+import SettingsPage from "./pages/SettingsPage.tsx";
+import HistoryPage from "./pages/HistoryPage.tsx";
+import AboutPage from "./pages/AboutPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -24,6 +27,9 @@ const App = () => (
           <Route path="/roadmap" element={<RoadmapPage />} />
           <Route path="/how-it-works" element={<HowItWorksPage />} />
           <Route path="/integration" element={<IntegrationPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/history" element={<HistoryPage />} />
+          <Route path="/about" element={<AboutPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
@@ -33,3 +39,4 @@ const App = () => (
 );
 
 export default App;
+

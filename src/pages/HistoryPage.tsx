@@ -1,3 +1,6 @@
+/**
+ * HistoryPage — displays past risk assessments with full breakdown details.
+ */
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import FooterSection from "@/components/FooterSection";
@@ -6,6 +9,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useWallet } from "@/hooks/useWallet";
 import { isMockModeEnabled } from "@/lib/mockMode";
 import { mockHistory } from "@/services/mockApi";
+import {
+  getSafetyBgClass,
+  getSafetyLabel,
+  formatDate,
+  formatTime,
+  formatRelative,
+} from "@/lib/riskUtils";
 
 interface HistoryEntry {
   id: string | number;
@@ -20,17 +30,42 @@ interface HistoryEntry {
 }
 
 function ScoreBadge({ score }: { score: number }) {
-  const cls =
-    score >= 70
-      ? "bg-risk-safe/10 border-risk-safe/30 text-risk-safe"
-      : score >= 40
-      ? "bg-risk-moderate/10 border-risk-moderate/30 text-risk-moderate"
-      : "bg-risk-danger/10 border-risk-danger/30 text-risk-danger";
-  const label = score >= 70 ? "Safe" : score >= 40 ? "Moderate" : "High Risk";
   return (
-    <span className={`font-mono text-xs font-bold px-2.5 py-1 rounded-full border ${cls}`}>
-      {score} · {label}
+    <span
+      className={`font-mono text-xs font-bold px-2.5 py-1 rounded-full border inline-flex items-center gap-1.5 ${getSafetyBgClass(score)}`}
+    >
+      <span className="tabular-nums">{score}</span>
+      <span className="opacity-70">·</span>
+      <span>{getSafetyLabel(score)}</span>
     </span>
+  );
+}
+
+function MiniBar({ value, colorFn }: { value: number; colorFn: (v: number) => string }) {
+  return (
+    <div className="w-full bg-surface-highlight rounded-full h-1.5 overflow-hidden">
+      <div
+        className={`h-1.5 rounded-full transition-all duration-700 ${colorFn(value)}`}
+        style={{ width: `${value}%` }}
+      />
+    </div>
+  );
+}
+const sw = (v: number) => (v > 40 ? "bg-risk-danger" : v > 20 ? "bg-risk-moderate" : "bg-risk-safe");
+const lq = (v: number) => (v < 50 ? "bg-risk-danger" : v < 70 ? "bg-risk-moderate" : "bg-risk-safe");
+const wl = (v: number) => (v > 60 ? "bg-risk-danger" : v > 30 ? "bg-risk-moderate" : "bg-risk-safe");
+
+function HistorySkeleton() {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div
+          key={i}
+          className="glass-card rounded-2xl p-5 h-24 animate-pulse bg-surface-raised"
+          style={{ opacity: 1 - i * 0.15 }}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -38,17 +73,18 @@ export default function HistoryPage() {
   const { address } = useWallet();
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState<string | number | null>(null);
 
   useEffect(() => {
-    if (!address) return;
+    if (!address) { setLoading(false); return; }
     (async () => {
       setLoading(true);
       if (isMockModeEnabled()) {
-        setHistory(mockHistory);
+        await new Promise((r) => setTimeout(r, 400));
+        setHistory(mockHistory as HistoryEntry[]);
         setLoading(false);
         return;
       }
-
       const { data, error } = await supabase
         .from("risk_assessments")
         .select("*")
@@ -59,81 +95,154 @@ export default function HistoryPage() {
     })();
   }, [address]);
 
+  const safe = history.filter((h) => h.safety_score >= 70).length;
+  const moderate = history.filter((h) => h.safety_score >= 40 && h.safety_score < 70).length;
+  const danger = history.filter((h) => h.safety_score < 40).length;
+
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <ScrollProgressBar />
       <Navbar />
       <main className="container mx-auto px-4 pt-28 pb-20 max-w-4xl">
-        <div className="mb-8">
-          <div className="section-label mb-3">On-Chain Records</div>
+        {/* Header */}
+        <div className="mb-10">
+          <div className="section-label mb-4">On-Chain Records</div>
           <h1 className="font-display font-bold text-4xl mb-2">
             Assessment <span className="text-gradient">History</span>
           </h1>
-          <p className="text-foreground-muted">All risk assessments logged from the demo engine.</p>
+          <p className="text-foreground-muted">All risk assessments logged from your swap sessions.</p>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-          </div>
-        ) : history.length === 0 ? (
-          <div className="glass-card rounded-2xl p-12 text-center">
-            <div className="text-5xl mb-4">📜</div>
-            <p className="font-display font-semibold text-lg text-foreground mb-2">No assessments yet</p>
-            <p className="text-foreground-muted text-sm">
-              Head to the{" "}
-              <a href="/#demo" className="text-primary underline underline-offset-2">
-                demo
-              </a>{" "}
-              and click "Assess Risk" to log your first entry.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {history.map((entry) => (
-              <div
-                key={entry.id}
-                className="glass-card rounded-2xl p-5 grid grid-cols-2 md:grid-cols-4 gap-4 items-center hover:border-primary/30 transition-colors"
-              >
-                {/* Token pair */}
-                <div>
-                  <p className="text-xs font-mono text-foreground-subtle mb-1">SWAP</p>
-                  <p className="font-display font-semibold text-foreground">
-                    {entry.token_in} → {entry.token_out}
-                  </p>
-                  <p className="text-xs font-mono text-foreground-muted mt-0.5">
-                    {entry.amount_in.toLocaleString()} tokens
-                  </p>
-                </div>
-
-                {/* Breakdown */}
-                <div className="hidden md:block">
-                  <p className="text-xs font-mono text-foreground-subtle mb-1">BREAKDOWN</p>
-                  <div className="space-y-0.5 text-xs font-mono text-foreground-muted">
-                    <p>🥪 Sandwich: {entry.sandwich_risk}</p>
-                    <p>💧 Liquidity: {entry.liquidity_health}</p>
-                    <p>👛 Wallet: {entry.wallet_risk}</p>
-                  </div>
-                </div>
-
-                {/* Score */}
-                <div>
-                  <p className="text-xs font-mono text-foreground-subtle mb-1.5">SAFETY SCORE</p>
-                  <ScoreBadge score={entry.safety_score} />
-                </div>
-
-                {/* Date */}
-                <div className="text-right">
-                  <p className="text-xs font-mono text-foreground-subtle mb-1">DATE</p>
-                  <p className="text-sm text-foreground-muted">
-                    {new Date(entry.created_at).toLocaleDateString()}
-                  </p>
-                  <p className="text-xs font-mono text-foreground-subtle">
-                    {new Date(entry.created_at).toLocaleTimeString()}
-                  </p>
-                </div>
+        {/* Stats row */}
+        {!loading && history.length > 0 && (
+          <div className="grid grid-cols-3 gap-3 mb-8">
+            {[
+              { label: "Safe Swaps", count: safe, cls: "text-risk-safe", bg: "bg-risk-safe/10 border-risk-safe/20" },
+              { label: "Moderate", count: moderate, cls: "text-risk-moderate", bg: "bg-risk-moderate/10 border-risk-moderate/20" },
+              { label: "High Risk", count: danger, cls: "text-risk-danger", bg: "bg-risk-danger/10 border-risk-danger/20" },
+            ].map((s) => (
+              <div key={s.label} className={`rounded-2xl p-4 border text-center ${s.bg}`}>
+                <p className={`font-display font-bold text-2xl tabular-nums ${s.cls}`}>{s.count}</p>
+                <p className="text-xs font-mono text-foreground-muted mt-0.5">{s.label}</p>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Content */}
+        {loading ? (
+          <HistorySkeleton />
+        ) : history.length === 0 ? (
+          <div className="glass-card rounded-2xl p-14 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-3xl mx-auto mb-5">
+              📜
+            </div>
+            <p className="font-display font-semibold text-lg text-foreground mb-2">No assessments yet</p>
+            <p className="text-foreground-muted text-sm mb-6">
+              Head to the demo and run your first risk assessment.
+            </p>
+            <a
+              href="/#demo"
+              className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-display font-semibold"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              </svg>
+              Try the Demo
+            </a>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {history.map((entry) => {
+              const isOpen = expanded === entry.id;
+              return (
+                <div
+                  key={entry.id}
+                  className="glass-card rounded-2xl overflow-hidden hover:border-primary/30 transition-all cursor-pointer"
+                  onClick={() => setExpanded(isOpen ? null : entry.id)}
+                >
+                  {/* Main row */}
+                  <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
+                    {/* Swap */}
+                    <div>
+                      <p className="text-xs font-mono text-foreground-subtle mb-1">SWAP</p>
+                      <p className="font-display font-semibold text-foreground">
+                        {entry.token_in} → {entry.token_out}
+                      </p>
+                      <p className="text-xs font-mono text-foreground-muted mt-0.5">
+                        {entry.amount_in.toLocaleString()} tokens
+                      </p>
+                    </div>
+
+                    {/* Breakdown mini-bars */}
+                    <div className="hidden md:block">
+                      <p className="text-xs font-mono text-foreground-subtle mb-2">RISK BREAKDOWN</p>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-foreground-subtle w-6">SW</span>
+                          <MiniBar value={entry.sandwich_risk} colorFn={sw} />
+                          <span className="text-xs font-mono text-foreground-muted tabular-nums w-6 text-right">{entry.sandwich_risk}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-foreground-subtle w-6">LQ</span>
+                          <MiniBar value={entry.liquidity_health} colorFn={lq} />
+                          <span className="text-xs font-mono text-foreground-muted tabular-nums w-6 text-right">{entry.liquidity_health}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-foreground-subtle w-6">WL</span>
+                          <MiniBar value={entry.wallet_risk} colorFn={wl} />
+                          <span className="text-xs font-mono text-foreground-muted tabular-nums w-6 text-right">{entry.wallet_risk}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Score */}
+                    <div>
+                      <p className="text-xs font-mono text-foreground-subtle mb-2">SAFETY SCORE</p>
+                      <ScoreBadge score={entry.safety_score} />
+                    </div>
+
+                    {/* Date + expand caret */}
+                    <div className="flex items-center justify-between md:justify-end gap-3">
+                      <div className="text-right">
+                        <p className="text-sm text-foreground-muted font-mono">{formatRelative(entry.created_at)}</p>
+                        <p className="text-xs text-foreground-subtle">{formatDate(entry.created_at)} · {formatTime(entry.created_at)}</p>
+                      </div>
+                      <svg
+                        className={`w-4 h-4 text-foreground-subtle transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Expanded detail */}
+                  {isOpen && (
+                    <div className="border-t border-border bg-surface px-5 py-4 grid grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <p className="text-xs font-mono text-foreground-subtle mb-1">🥪 SANDWICH RISK</p>
+                        <p className={`font-mono font-bold text-lg tabular-nums ${sw(entry.sandwich_risk).replace("bg-", "text-")}`}>
+                          {entry.sandwich_risk}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-mono text-foreground-subtle mb-1">💧 LIQUIDITY HEALTH</p>
+                        <p className={`font-mono font-bold text-lg tabular-nums ${lq(entry.liquidity_health).replace("bg-", "text-")}`}>
+                          {entry.liquidity_health}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-mono text-foreground-subtle mb-1">👛 WALLET RISK</p>
+                        <p className={`font-mono font-bold text-lg tabular-nums ${wl(entry.wallet_risk).replace("bg-", "text-")}`}>
+                          {entry.wallet_risk}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </main>

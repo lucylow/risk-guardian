@@ -78,7 +78,7 @@ export default function AlternativeSuggestions({
                 await logSuggestionFeedback({
                   user_address: request.user_address,
                   suggestion_type: s.type,
-                  suggested_params: s,
+                  suggested_params: { type: s.type, amount: s.amount, description: s.description } as Record<string, unknown>,
                   safety_score: s.safety_score,
                   accepted: true,
                 });

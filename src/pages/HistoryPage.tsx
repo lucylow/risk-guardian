@@ -1,7 +1,19 @@
 /**
- * HistoryPage — displays past risk assessments with full breakdown details.
+ * HistoryPage — displays past risk assessments with full breakdown details and a trend chart.
  */
 import { useState, useEffect } from "react";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine,
+  Area,
+  AreaChart,
+} from "recharts";
 import Navbar from "@/components/Navbar";
 import FooterSection from "@/components/FooterSection";
 import ScrollProgressBar from "@/components/ScrollProgressBar";
@@ -51,6 +63,7 @@ function MiniBar({ value, colorFn }: { value: number; colorFn: (v: number) => st
     </div>
   );
 }
+
 const sw = (v: number) => (v > 40 ? "bg-risk-danger" : v > 20 ? "bg-risk-moderate" : "bg-risk-safe");
 const lq = (v: number) => (v < 50 ? "bg-risk-danger" : v < 70 ? "bg-risk-moderate" : "bg-risk-safe");
 const wl = (v: number) => (v > 60 ? "bg-risk-danger" : v > 30 ? "bg-risk-moderate" : "bg-risk-safe");
@@ -65,6 +78,32 @@ function HistorySkeleton() {
           style={{ opacity: 1 - i * 0.15 }}
         />
       ))}
+    </div>
+  );
+}
+
+// Custom tooltip for the chart
+function ChartTooltip({ active, payload, label }: {
+  active?: boolean;
+  payload?: Array<{ value: number; name: string; color: string }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  const score = payload[0].value;
+  const color =
+    score >= 70
+      ? "hsl(var(--risk-safe))"
+      : score >= 40
+      ? "hsl(var(--risk-moderate))"
+      : "hsl(var(--risk-danger))";
+  const label2 = score >= 70 ? "Safe" : score >= 40 ? "Moderate" : "High Risk";
+
+  return (
+    <div className="rounded-xl border border-border bg-surface-raised px-4 py-3 shadow-card text-sm">
+      <p className="font-mono text-xs text-foreground-subtle mb-1">{label}</p>
+      <p className="font-display font-bold" style={{ color }}>
+        {score} <span className="text-xs font-mono font-normal">— {label2}</span>
+      </p>
     </div>
   );
 }
@@ -99,6 +138,27 @@ export default function HistoryPage() {
   const moderate = history.filter((h) => h.safety_score >= 40 && h.safety_score < 70).length;
   const danger = history.filter((h) => h.safety_score < 40).length;
 
+  // Chart data — oldest first, abbreviated label
+  const chartData = [...history]
+    .reverse()
+    .map((entry, i) => ({
+      index: i + 1,
+      label: `${entry.token_in}→${entry.token_out}`,
+      time: formatDate(entry.created_at),
+      score: entry.safety_score,
+      sandwich: entry.sandwich_risk,
+      liquidity: entry.liquidity_health,
+      wallet: entry.wallet_risk,
+    }));
+
+  const avgScore =
+    history.length > 0
+      ? Math.round(history.reduce((s, h) => s + h.safety_score, 0) / history.length)
+      : null;
+
+  // Determine gradient stop color based on average
+  const gradientId = "scoreGradient";
+
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <ScrollProgressBar />
@@ -115,8 +175,9 @@ export default function HistoryPage() {
 
         {/* Stats row */}
         {!loading && history.length > 0 && (
-          <div className="grid grid-cols-3 gap-3 mb-8">
+          <div className="grid grid-cols-4 gap-3 mb-8">
             {[
+              { label: "Avg Score", count: avgScore ?? "—", cls: "text-foreground", bg: "bg-surface-raised border-border" },
               { label: "Safe Swaps", count: safe, cls: "text-risk-safe", bg: "bg-risk-safe/10 border-risk-safe/20" },
               { label: "Moderate", count: moderate, cls: "text-risk-moderate", bg: "bg-risk-moderate/10 border-risk-moderate/20" },
               { label: "High Risk", count: danger, cls: "text-risk-danger", bg: "bg-risk-danger/10 border-risk-danger/20" },
@@ -126,6 +187,145 @@ export default function HistoryPage() {
                 <p className="text-xs font-mono text-foreground-muted mt-0.5">{s.label}</p>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ── Trend Chart ── */}
+        {!loading && chartData.length >= 2 && (
+          <div className="glass-card rounded-2xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <p className="text-xs font-mono text-foreground-subtle mb-1">RISK TREND</p>
+                <h2 className="font-display font-semibold text-lg text-foreground">Safety Score Over Time</h2>
+              </div>
+              {avgScore !== null && (
+                <div className="text-right">
+                  <p className="text-xs font-mono text-foreground-subtle">AVERAGE</p>
+                  <p
+                    className="font-display font-bold text-2xl tabular-nums"
+                    style={{
+                      color:
+                        avgScore >= 70
+                          ? "hsl(var(--risk-safe))"
+                          : avgScore >= 40
+                          ? "hsl(var(--risk-moderate))"
+                          : "hsl(var(--risk-danger))",
+                    }}
+                  >
+                    {avgScore}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="hsl(var(--border))"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: "hsl(var(--foreground-subtle))", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }}
+                  axisLine={false}
+                  tickLine={false}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  domain={[0, 100]}
+                  tick={{ fill: "hsl(var(--foreground-subtle))", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }}
+                  axisLine={false}
+                  tickLine={false}
+                  ticks={[0, 40, 70, 100]}
+                />
+                {/* Zone reference lines */}
+                <ReferenceLine
+                  y={70}
+                  stroke="hsl(var(--risk-safe))"
+                  strokeDasharray="4 4"
+                  strokeOpacity={0.5}
+                  label={{
+                    value: "SAFE",
+                    position: "right",
+                    fill: "hsl(var(--risk-safe))",
+                    fontSize: 9,
+                    fontFamily: "JetBrains Mono, monospace",
+                  }}
+                />
+                <ReferenceLine
+                  y={40}
+                  stroke="hsl(var(--risk-danger))"
+                  strokeDasharray="4 4"
+                  strokeOpacity={0.5}
+                  label={{
+                    value: "DANGER",
+                    position: "right",
+                    fill: "hsl(var(--risk-danger))",
+                    fontSize: 9,
+                    fontFamily: "JetBrains Mono, monospace",
+                  }}
+                />
+                {avgScore !== null && (
+                  <ReferenceLine
+                    y={avgScore}
+                    stroke="hsl(var(--primary))"
+                    strokeDasharray="6 3"
+                    strokeOpacity={0.6}
+                  />
+                )}
+                <Tooltip content={<ChartTooltip />} cursor={{ stroke: "hsl(var(--border-bright))", strokeWidth: 1 }} />
+                <Area
+                  type="monotone"
+                  dataKey="score"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2.5}
+                  fill={`url(#${gradientId})`}
+                  dot={(props) => {
+                    const { cx, cy, payload } = props;
+                    const s = payload.score as number;
+                    const c =
+                      s >= 70
+                        ? "hsl(var(--risk-safe))"
+                        : s >= 40
+                        ? "hsl(var(--risk-moderate))"
+                        : "hsl(var(--risk-danger))";
+                    return (
+                      <circle
+                        key={`dot-${cx}-${cy}`}
+                        cx={cx}
+                        cy={cy}
+                        r={5}
+                        fill={c}
+                        stroke="hsl(var(--surface-raised))"
+                        strokeWidth={2}
+                      />
+                    );
+                  }}
+                  activeDot={{ r: 7, stroke: "hsl(var(--primary))", strokeWidth: 2, fill: "hsl(var(--surface-raised))" }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+
+            {/* Legend */}
+            <div className="flex items-center gap-5 mt-4 justify-center">
+              {[
+                { color: "bg-risk-safe", label: "Safe (≥70)" },
+                { color: "bg-risk-moderate", label: "Moderate (40–69)" },
+                { color: "bg-risk-danger", label: "High Risk (<40)" },
+              ].map((l) => (
+                <div key={l.label} className="flex items-center gap-1.5">
+                  <div className={`w-2 h-2 rounded-full ${l.color}`} />
+                  <span className="text-xs font-mono text-foreground-subtle">{l.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

@@ -59,6 +59,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_settings: {
+        Row: {
+          auto_adjust_slippage: boolean
+          auto_protect_enabled: boolean
+          created_at: string
+          id: string
+          notify_on_high_risk: boolean
+          risk_threshold: number
+          updated_at: string
+          wallet_address: string
+        }
+        Insert: {
+          auto_adjust_slippage?: boolean
+          auto_protect_enabled?: boolean
+          created_at?: string
+          id?: string
+          notify_on_high_risk?: boolean
+          risk_threshold?: number
+          updated_at?: string
+          wallet_address: string
+        }
+        Update: {
+          auto_adjust_slippage?: boolean
+          auto_protect_enabled?: boolean
+          created_at?: string
+          id?: string
+          notify_on_high_risk?: boolean
+          risk_threshold?: number
+          updated_at?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

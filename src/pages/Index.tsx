@@ -9,6 +9,7 @@ import RoadmapSection from "@/components/RoadmapSection";
 import TeamSection from "@/components/TeamSection";
 import FooterSection from "@/components/FooterSection";
 import ScrollProgressBar from "@/components/ScrollProgressBar";
+import MarketPulse from "@/components/MarketPulse";
 
 export default function Index() {
   return (
@@ -19,6 +20,7 @@ export default function Index() {
       <ProblemSection />
       <SolutionSection />
       <DemoSection />
+      <MarketPulse />
       <IntegrationSection />
       <HowItWorksSection />
       <RoadmapSection />

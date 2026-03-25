@@ -226,9 +226,16 @@ export async function saveUserSettings(
 // ── Market Pulse ──────────────────────────────────────────────────────────────
 
 export async function getMarketPulse(): Promise<MarketPulseResponse> {
-  const { data, error } = await supabase.functions.invoke("market-pulse");
-  if (error) throw error;
-  return data as MarketPulseResponse;
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/market-pulse`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      apikey:        import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+    },
+  });
+  if (!res.ok) throw new Error(`market-pulse error: ${res.status}`);
+  return (await res.json()) as MarketPulseResponse;
 }
 
 export async function getPairSnapshot(pair: string): Promise<PairSnapshot> {

@@ -197,13 +197,7 @@ export async function getUserSettings(wallet: string): Promise<UserSettings> {
   if (isMockModeEnabled() || !wallet || wallet === "0xdemo_user") {
     return { wallet_address: wallet, ...SETTINGS_DEFAULTS };
   }
-  const { data, error } = await supabase.functions.invoke("user-settings", {
-    method: "GET",
-    headers: { "x-wallet": wallet },
-    body: null,
-  } as Parameters<typeof supabase.functions.invoke>[1]);
-
-  // invoke doesn't support query params natively, so call fetch directly
+  // supabase.functions.invoke doesn't support GET query params, so use fetch directly
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/user-settings?wallet=${encodeURIComponent(wallet)}`;
   const res = await fetch(url, {
     headers: {

@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { isMockModeEnabled } from "@/lib/mockMode";
 import { getMockRisk } from "@/mocks/mockData";
+// authFetch is kept for future authenticated endpoints
 
 export interface RiskRequest {
   user_address: string;

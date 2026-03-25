@@ -232,11 +232,6 @@ export async function getMarketPulse(): Promise<MarketPulseResponse> {
 }
 
 export async function getPairSnapshot(pair: string): Promise<PairSnapshot> {
-  const { data, error } = await supabase.functions.invoke("market-pulse", {
-    body: null,
-    headers: {},
-  });
-  // Use GET with query param via fetch
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/market-pulse?pair=${encodeURIComponent(pair)}`;
   const res = await fetch(url, {
     headers: {

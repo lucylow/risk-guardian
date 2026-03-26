@@ -396,10 +396,5 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 
-**Live Demo** (coming soon)  
-**Contact**: [team@riskoracle.io](mailto:team@riskoracle.io)
-
----
-
 *Made with ❤️ for the OneChain community*
 

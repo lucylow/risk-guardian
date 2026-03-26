@@ -131,7 +131,7 @@ export default function SimulatorPage() {
             {/* Result */}
             <div className="glass-card rounded-2xl p-8 border border-border flex flex-col items-center gap-6">
               <RiskGauge score={result.safetyScore} size="lg" />
-              <RiskBreakdown sandwich={result.sandwich} liquidity={result.liquidity} walletRisk={result.walletRisk} />
+              <RiskBreakdown data={{ sandwich_risk: result.sandwich, liquidity_health: result.liquidity, wallet_risk: result.walletRisk }} />
               <div className="text-center mt-4">
                 <span className={`inline-block font-mono text-xs font-bold px-4 py-1.5 rounded-full border ${
                   result.safetyScore >= 70

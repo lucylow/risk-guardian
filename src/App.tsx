@@ -11,6 +11,13 @@ import IntegrationPage from "./pages/IntegrationPage.tsx";
 import SettingsPage from "./pages/SettingsPage.tsx";
 import HistoryPage from "./pages/HistoryPage.tsx";
 import AboutPage from "./pages/AboutPage.tsx";
+import PortfolioPage from "./pages/PortfolioPage.tsx";
+import SimulatorPage from "./pages/SimulatorPage.tsx";
+import PlayPage from "./pages/PlayPage.tsx";
+import DevelopersPage from "./pages/DevelopersPage.tsx";
+import RiskModelPage from "./pages/RiskModelPage.tsx";
+import AlertsPage from "./pages/AlertsPage.tsx";
+import ExperimentsPage from "./pages/ExperimentsPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import DemoModeToggle from "./components/DemoModeToggle";
 import { isMockModeEnabled, setMockModeEnabled } from "./lib/mockMode";
@@ -43,6 +50,13 @@ const App = () => {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/about" element={<AboutPage />} />
+            <Route path="/portfolio" element={<PortfolioPage />} />
+            <Route path="/simulator" element={<SimulatorPage />} />
+            <Route path="/play" element={<PlayPage />} />
+            <Route path="/developers" element={<DevelopersPage />} />
+            <Route path="/docs/risk-model" element={<RiskModelPage />} />
+            <Route path="/alerts" element={<AlertsPage />} />
+            <Route path="/experiments" element={<ExperimentsPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
@@ -54,4 +68,3 @@ const App = () => {
 };
 
 export default App;
-

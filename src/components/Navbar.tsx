@@ -5,11 +5,31 @@ import WalletConnectButton from "./WalletConnectButton";
 
 const SECTIONS = ["problem", "solution", "demo", "how-it-works", "roadmap", "team"];
 
-const PAGE_LINKS = [
-  { label: "History", href: "/history", icon: "📜" },
-  { label: "Settings", href: "/settings", icon: "⚙️" },
-  { label: "About", href: "/about", icon: "ℹ️" },
+const NAV_GROUPS = [
+  {
+    label: "User",
+    links: [
+      { label: "Portfolio", href: "/portfolio", icon: "💼" },
+      { label: "Simulator", href: "/simulator", icon: "🧪" },
+      { label: "Play", href: "/play", icon: "🎮" },
+      { label: "Alerts", href: "/alerts", icon: "🔔" },
+      { label: "History", href: "/history", icon: "📜" },
+      { label: "Settings", href: "/settings", icon: "⚙️" },
+    ],
+  },
+  {
+    label: "Advanced",
+    links: [
+      { label: "Integrations", href: "/integration", icon: "🔗" },
+      { label: "Risk Model", href: "/docs/risk-model", icon: "📊" },
+      { label: "Experiments", href: "/experiments", icon: "🔬" },
+      { label: "Developers", href: "/developers", icon: "💻" },
+      { label: "About", href: "/about", icon: "ℹ️" },
+    ],
+  },
 ];
+
+const ALL_PAGE_LINKS = NAV_GROUPS.flatMap((g) => g.links);
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -34,7 +54,6 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, [isHome]);
 
-  // Always show bg on non-home pages
   const showBg = scrolled || !isHome;
 
   const sectionLinks = [
@@ -44,6 +63,14 @@ export default function Navbar() {
     { label: "How It Works", href: "/#how-it-works", id: "how-it-works" },
     { label: "Roadmap", href: "/#roadmap", id: "roadmap" },
     { label: "Team", href: "/#team", id: "team" },
+  ];
+
+  // Compact top-bar links (most important ones)
+  const TOP_BAR_LINKS = [
+    { label: "Portfolio", href: "/portfolio", icon: "💼" },
+    { label: "Simulator", href: "/simulator", icon: "🧪" },
+    { label: "Play", href: "/play", icon: "🎮" },
+    { label: "Alerts", href: "/alerts", icon: "🔔" },
   ];
 
   return (
@@ -91,11 +118,11 @@ export default function Navbar() {
 
         {/* Desktop right — page links + CTA */}
         <div className="hidden md:flex items-center gap-1">
-          {PAGE_LINKS.map((l) => (
+          {TOP_BAR_LINKS.map((l) => (
             <Link
               key={l.label}
               to={l.href}
-              className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-all duration-200 flex items-center gap-1.5 ${
+              className={`text-sm px-2.5 py-1.5 rounded-lg font-medium transition-all duration-200 flex items-center gap-1 ${
                 location.pathname === l.href
                   ? "text-primary bg-primary/10"
                   : "text-foreground-muted hover:text-foreground hover:bg-surface-highlight"
@@ -105,6 +132,35 @@ export default function Navbar() {
               {l.label}
             </Link>
           ))}
+          {/* More dropdown */}
+          <div className="relative group">
+            <button className="text-sm px-2.5 py-1.5 rounded-lg font-medium text-foreground-muted hover:text-foreground hover:bg-surface-highlight transition-colors flex items-center gap-1">
+              <span className="text-xs">⋯</span> More
+            </button>
+            <div className="absolute right-0 top-full mt-1 w-52 bg-surface/95 backdrop-blur-md border border-border rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-2">
+              {NAV_GROUPS.map((g) => (
+                <div key={g.label}>
+                  <p className="px-4 py-1.5 text-[10px] font-mono text-foreground-subtle uppercase tracking-wider">{g.label}</p>
+                  {g.links
+                    .filter((l) => !TOP_BAR_LINKS.some((t) => t.href === l.href))
+                    .map((l) => (
+                    <Link
+                      key={l.label}
+                      to={l.href}
+                      className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
+                        location.pathname === l.href
+                          ? "text-primary bg-primary/5"
+                          : "text-foreground-muted hover:text-foreground hover:bg-surface-highlight"
+                      }`}
+                    >
+                      <span className="text-xs">{l.icon}</span>
+                      {l.label}
+                    </Link>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
           <div className="ml-2">
             <WalletConnectButton />
           </div>
@@ -128,7 +184,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {open && (
-        <div className="md:hidden bg-surface/95 backdrop-blur-md border-t border-border px-4 py-4 flex flex-col gap-1 shadow-xl">
+        <div className="md:hidden bg-surface/95 backdrop-blur-md border-t border-border px-4 py-4 flex flex-col gap-1 shadow-xl max-h-[80vh] overflow-y-auto">
           {isHome && sectionLinks.map((l) => (
             <a
               key={l.label}
@@ -143,23 +199,26 @@ export default function Navbar() {
               {l.label}
             </a>
           ))}
-          <div className={isHome ? "border-t border-border pt-2 mt-1" : ""}>
-            {PAGE_LINKS.map((l) => (
-              <Link
-                key={l.label}
-                to={l.href}
-                onClick={() => setOpen(false)}
-                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-colors ${
-                  location.pathname === l.href
-                    ? "text-primary bg-primary/10"
-                    : "text-foreground-muted hover:text-foreground hover:bg-surface-highlight"
-                }`}
-              >
-                <span>{l.icon}</span>
-                {l.label}
-              </Link>
-            ))}
-          </div>
+          {NAV_GROUPS.map((g) => (
+            <div key={g.label} className={isHome ? "border-t border-border pt-2 mt-1" : ""}>
+              <p className="px-3 py-1 text-[10px] font-mono text-foreground-subtle uppercase tracking-wider">{g.label}</p>
+              {g.links.map((l) => (
+                <Link
+                  key={l.label}
+                  to={l.href}
+                  onClick={() => setOpen(false)}
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-colors ${
+                    location.pathname === l.href
+                      ? "text-primary bg-primary/10"
+                      : "text-foreground-muted hover:text-foreground hover:bg-surface-highlight"
+                  }`}
+                >
+                  <span>{l.icon}</span>
+                  {l.label}
+                </Link>
+              ))}
+            </div>
+          ))}
           <a href="/#demo" className="btn-primary px-4 py-2.5 text-sm rounded-lg text-center mt-2">
             Try Demo
           </a>
@@ -168,4 +227,3 @@ export default function Navbar() {
     </header>
   );
 }
-

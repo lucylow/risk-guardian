@@ -14,9 +14,6 @@ import {
   Area,
   AreaChart,
 } from "recharts";
-import Navbar from "@/components/Navbar";
-import FooterSection from "@/components/FooterSection";
-import ScrollProgressBar from "@/components/ScrollProgressBar";
 import { supabase } from "@/integrations/supabase/client";
 import { useWallet } from "@/hooks/useWallet";
 import { isMockModeEnabled } from "@/lib/mockMode";

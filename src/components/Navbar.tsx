@@ -20,6 +20,7 @@ const NAV_GROUPS = [
   {
     label: "Advanced",
     links: [
+      { label: "Oracle", href: "/oracle", icon: "⛓️" },
       { label: "Integrations", href: "/integration", icon: "🔗" },
       { label: "Risk Model", href: "/docs/risk-model", icon: "📊" },
       { label: "Experiments", href: "/experiments", icon: "🔬" },

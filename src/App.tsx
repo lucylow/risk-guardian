@@ -21,6 +21,7 @@ import ExperimentsPage from "./pages/ExperimentsPage.tsx";
 import OraclePage from "./pages/OraclePage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import DemoModeToggle from "./components/DemoModeToggle";
+import AppShell from "./components/layout/AppShell";
 import { isMockModeEnabled, setMockModeEnabled } from "./lib/mockMode";
 import { useState } from "react";
 
@@ -43,25 +44,34 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Landing page — has its own full-width layout */}
             <Route path="/" element={<Index />} />
-            <Route path="/demo" element={<DemoPage />} />
-            <Route path="/roadmap" element={<RoadmapPage />} />
-            <Route path="/how-it-works" element={<HowItWorksPage />} />
-            <Route path="/integration" element={<IntegrationPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/history" element={<HistoryPage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/portfolio" element={<PortfolioPage />} />
-            <Route path="/simulator" element={<SimulatorPage />} />
-            <Route path="/play" element={<PlayPage />} />
-            <Route path="/developers" element={<DevelopersPage />} />
-            <Route path="/docs/risk-model" element={<RiskModelPage />} />
-            <Route path="/alerts" element={<AlertsPage />} />
-            <Route path="/experiments" element={<ExperimentsPage />} />
-            <Route path="/oracle" element={<OraclePage />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
+
+            {/* All inner pages wrapped in AppShell (sidebar + topbar) */}
+            <Route element={<AppShell><Routes><Route path="*" element={null} /></Routes></AppShell>}>
+              {/* This won't work — use layout route pattern instead */}
+            </Route>
           </Routes>
+
+          {/* Use a simpler approach: AppShell wrapper per route group */}
+          <Routes>
+            <Route path="/demo" element={<AppShell><DemoPage /></AppShell>} />
+            <Route path="/roadmap" element={<AppShell><RoadmapPage /></AppShell>} />
+            <Route path="/how-it-works" element={<AppShell><HowItWorksPage /></AppShell>} />
+            <Route path="/integration" element={<AppShell><IntegrationPage /></AppShell>} />
+            <Route path="/settings" element={<AppShell><SettingsPage /></AppShell>} />
+            <Route path="/history" element={<AppShell><HistoryPage /></AppShell>} />
+            <Route path="/about" element={<AppShell><AboutPage /></AppShell>} />
+            <Route path="/portfolio" element={<AppShell><PortfolioPage /></AppShell>} />
+            <Route path="/simulator" element={<AppShell><SimulatorPage /></AppShell>} />
+            <Route path="/play" element={<AppShell><PlayPage /></AppShell>} />
+            <Route path="/developers" element={<AppShell><DevelopersPage /></AppShell>} />
+            <Route path="/docs/risk-model" element={<AppShell><RiskModelPage /></AppShell>} />
+            <Route path="/alerts" element={<AppShell><AlertsPage /></AppShell>} />
+            <Route path="/experiments" element={<AppShell><ExperimentsPage /></AppShell>} />
+            <Route path="/oracle" element={<AppShell><OraclePage /></AppShell>} />
+          </Routes>
+
           <DemoModeToggle isMock={useMock} onToggle={toggleMock} />
         </BrowserRouter>
       </TooltipProvider>

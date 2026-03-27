@@ -1,7 +1,3 @@
-import Navbar from "@/components/Navbar";
-import FooterSection from "@/components/FooterSection";
-import ScrollProgressBar from "@/components/ScrollProgressBar";
-
 const CURL_EXAMPLE = `curl -X POST https://riskoracle.lovable.app/api/assess \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -58,7 +54,7 @@ interface RiskResponse {
   recommendation: string;
 }`;
 
-function CodeBlock({ title, code, lang = "bash" }: { title: string; code: string; lang?: string }) {
+function CodeBlock({ title, code }: { title: string; code: string }) {
   return (
     <div className="glass-card rounded-xl border border-border overflow-hidden">
       <div className="px-4 py-2 border-b border-border flex items-center justify-between">
@@ -83,17 +79,14 @@ const RECIPES = [
 
 export default function DevelopersPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-      <ScrollProgressBar />
-      <Navbar />
-
-      <section className="pt-28 pb-10 relative">
+    <>
+      <section className="pb-10 relative">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/5 rounded-full blur-3xl" />
         </div>
-        <div className="container mx-auto px-4 text-center">
+        <div className="text-center">
           <div className="section-label mb-4 inline-flex">Developers</div>
-          <h1 className="font-display font-bold text-5xl sm:text-6xl mb-4">
+          <h1 className="font-display font-bold text-4xl sm:text-5xl mb-4">
             Build with <span className="text-gradient">Risk Oracle</span>
           </h1>
           <p className="text-foreground-muted text-lg max-w-2xl mx-auto">
@@ -102,25 +95,22 @@ export default function DevelopersPage() {
         </div>
       </section>
 
-      <section className="pb-16">
-        <div className="container mx-auto px-4 max-w-4xl space-y-10">
-          {/* Quickstart */}
+      <section className="pb-12">
+        <div className="max-w-4xl mx-auto space-y-10">
           <div>
             <h2 className="font-display font-bold text-2xl mb-6">Quickstart</h2>
             <div className="space-y-4">
               <CodeBlock title="cURL" code={CURL_EXAMPLE} />
-              <CodeBlock title="TypeScript / Fetch" code={TS_EXAMPLE} lang="typescript" />
-              <CodeBlock title="Response" code={RESPONSE_EXAMPLE} lang="json" />
+              <CodeBlock title="TypeScript / Fetch" code={TS_EXAMPLE} />
+              <CodeBlock title="Response" code={RESPONSE_EXAMPLE} />
             </div>
           </div>
 
-          {/* Types */}
           <div>
             <h2 className="font-display font-bold text-2xl mb-6">Type Definitions</h2>
-            <CodeBlock title="TypeScript Interfaces" code={TYPES_EXAMPLE} lang="typescript" />
+            <CodeBlock title="TypeScript Interfaces" code={TYPES_EXAMPLE} />
           </div>
 
-          {/* Integration Recipes */}
           <div>
             <h2 className="font-display font-bold text-2xl mb-6">Integration Recipes</h2>
             <div className="grid md:grid-cols-3 gap-4">
@@ -133,7 +123,6 @@ export default function DevelopersPage() {
             </div>
           </div>
 
-          {/* OneChain Dev Links */}
           <div className="glass-card rounded-2xl p-8 border border-primary/20 text-center">
             <h2 className="font-display font-bold text-2xl mb-4">OneChain Developer Resources</h2>
             <p className="text-foreground-muted mb-6">Explore the full OneChain developer ecosystem.</p>
@@ -148,8 +137,6 @@ export default function DevelopersPage() {
           </div>
         </div>
       </section>
-
-      <FooterSection />
-    </div>
+    </>
   );
 }

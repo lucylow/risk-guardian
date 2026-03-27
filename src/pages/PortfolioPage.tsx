@@ -1,9 +1,6 @@
-import Navbar from "@/components/Navbar";
-import FooterSection from "@/components/FooterSection";
-import ScrollProgressBar from "@/components/ScrollProgressBar";
 import RiskGauge from "@/components/RiskGauge";
 import { useOneWallet } from "@/hooks/useOneWallet";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface TokenHolding {
   symbol: string;
@@ -56,22 +53,19 @@ function ilBadge(level: string) {
 }
 
 export default function PortfolioPage() {
-  const { address, shortAddress, oneId, isConnected } = useOneWallet();
+  const { shortAddress, oneId } = useOneWallet();
   const [aggregateScore] = useState(76);
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-      <ScrollProgressBar />
-      <Navbar />
-
+    <>
       {/* Header */}
-      <section className="pt-28 pb-10 relative">
+      <section className="pb-10 relative">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/5 rounded-full blur-3xl" />
         </div>
-        <div className="container mx-auto px-4 text-center">
+        <div className="text-center">
           <div className="section-label mb-4 inline-flex">Portfolio</div>
-          <h1 className="font-display font-bold text-5xl sm:text-6xl mb-4">
+          <h1 className="font-display font-bold text-4xl sm:text-5xl mb-4">
             Your Risk <span className="text-gradient">Profile</span>
           </h1>
           <p className="text-foreground-muted text-lg max-w-2xl mx-auto">
@@ -82,106 +76,96 @@ export default function PortfolioPage() {
 
       {/* Wallet banner + aggregate gauge */}
       <section className="pb-12">
-        <div className="container mx-auto px-4">
-          <div className="glass-card rounded-2xl p-8 border border-border flex flex-col md:flex-row items-center gap-8">
-            <RiskGauge score={aggregateScore} size="md" />
-            <div className="flex-1 text-center md:text-left">
-              <p className="text-foreground-muted text-sm font-mono mb-1">Connected Wallet</p>
-              <p className="font-display font-bold text-xl text-foreground">
-                {oneId ? `@${oneId.displayName}` : shortAddress ?? "Not connected"}
-              </p>
-              {oneId && (
-                <span className="inline-block mt-2 text-xs font-mono px-3 py-1 rounded-full border border-accent/30 bg-accent/10 text-accent">
-                  {oneId.reputationTier} · {oneId.crossChainActivity}% cross-chain
-                </span>
-              )}
-              <p className="text-foreground-subtle text-sm mt-3">
-                Aggregate Safety Score across all positions
-              </p>
-            </div>
+        <div className="glass-card rounded-2xl p-8 border border-border flex flex-col md:flex-row items-center gap-8">
+          <RiskGauge score={aggregateScore} size="md" />
+          <div className="flex-1 text-center md:text-left">
+            <p className="text-foreground-muted text-sm font-mono mb-1">Connected Wallet</p>
+            <p className="font-display font-bold text-xl text-foreground">
+              {oneId ? `@${oneId.displayName}` : shortAddress ?? "Not connected"}
+            </p>
+            {oneId && (
+              <span className="inline-block mt-2 text-xs font-mono px-3 py-1 rounded-full border border-accent/30 bg-accent/10 text-accent">
+                {oneId.reputationTier} · {oneId.crossChainActivity}% cross-chain
+              </span>
+            )}
+            <p className="text-foreground-subtle text-sm mt-3">
+              Aggregate Safety Score across all positions
+            </p>
           </div>
         </div>
       </section>
 
       {/* Token Holdings */}
       <section className="pb-12">
-        <div className="container mx-auto px-4">
-          <h2 className="font-display font-bold text-2xl mb-6">Spot Holdings</h2>
-          <div className="grid gap-3">
-            {MOCK_TOKENS.map((t) => (
-              <div key={t.symbol} className="glass-card rounded-xl p-4 border border-border flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-surface-highlight flex items-center justify-center font-display font-bold text-sm text-foreground">
-                    {t.symbol.slice(0, 2)}
-                  </div>
-                  <div>
-                    <p className="font-display font-semibold text-foreground">{t.symbol}</p>
-                    <p className="text-foreground-subtle text-xs">{t.name}</p>
-                  </div>
+        <h2 className="font-display font-bold text-2xl mb-6">Spot Holdings</h2>
+        <div className="grid gap-3">
+          {MOCK_TOKENS.map((t) => (
+            <div key={t.symbol} className="glass-card rounded-xl p-4 border border-border flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-surface-highlight flex items-center justify-center font-display font-bold text-sm text-foreground">
+                  {t.symbol.slice(0, 2)}
                 </div>
-                <div className="text-right flex items-center gap-6">
-                  <div>
-                    <p className="font-mono text-sm text-foreground">{t.balance}</p>
-                    <p className="text-foreground-subtle text-xs">${t.usdValue.toLocaleString()}</p>
-                  </div>
-                  <span className={`font-mono text-xs font-bold px-3 py-1 rounded-full border ${riskBadge(t.riskScore)}`}>
-                    {t.riskScore}
-                  </span>
+                <div>
+                  <p className="font-display font-semibold text-foreground">{t.symbol}</p>
+                  <p className="text-foreground-subtle text-xs">{t.name}</p>
                 </div>
               </div>
-            ))}
-          </div>
+              <div className="text-right flex items-center gap-6">
+                <div>
+                  <p className="font-mono text-sm text-foreground">{t.balance}</p>
+                  <p className="text-foreground-subtle text-xs">${t.usdValue.toLocaleString()}</p>
+                </div>
+                <span className={`font-mono text-xs font-bold px-3 py-1 rounded-full border ${riskBadge(t.riskScore)}`}>
+                  {t.riskScore}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* Liquidity Positions */}
       <section className="pb-12">
-        <div className="container mx-auto px-4">
-          <h2 className="font-display font-bold text-2xl mb-6">Liquidity Positions</h2>
-          <div className="grid gap-3">
-            {MOCK_LP.map((lp) => (
-              <div key={lp.pair} className="glass-card rounded-xl p-4 border border-border flex items-center justify-between">
-                <div>
-                  <p className="font-display font-semibold text-foreground">{lp.pair}</p>
-                  <p className="text-foreground-subtle text-xs">TVL ${(lp.tvl / 1e6).toFixed(1)}M · {(lp.share * 100).toFixed(2)}% share</p>
-                </div>
-                <span className={`font-mono text-xs font-bold px-3 py-1 rounded-full border ${ilBadge(lp.ilRisk)}`}>
-                  IL Risk: {lp.ilRisk}
-                </span>
+        <h2 className="font-display font-bold text-2xl mb-6">Liquidity Positions</h2>
+        <div className="grid gap-3">
+          {MOCK_LP.map((lp) => (
+            <div key={lp.pair} className="glass-card rounded-xl p-4 border border-border flex items-center justify-between">
+              <div>
+                <p className="font-display font-semibold text-foreground">{lp.pair}</p>
+                <p className="text-foreground-subtle text-xs">TVL ${(lp.tvl / 1e6).toFixed(1)}M · {(lp.share * 100).toFixed(2)}% share</p>
               </div>
-            ))}
-          </div>
+              <span className={`font-mono text-xs font-bold px-3 py-1 rounded-full border ${ilBadge(lp.ilRisk)}`}>
+                IL Risk: {lp.ilRisk}
+              </span>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* RWA Exposure */}
-      <section className="pb-24">
-        <div className="container mx-auto px-4">
-          <h2 className="font-display font-bold text-2xl mb-6">RWA Exposure</h2>
-          <div className="glass-card rounded-2xl p-8 border border-border">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-              <div>
-                <p className="text-foreground-subtle text-xs font-mono mb-1">Total USD</p>
-                <p className="font-display font-bold text-2xl text-foreground">${MOCK_RWA.totalUsd.toLocaleString()}</p>
-              </div>
-              <div>
-                <p className="text-foreground-subtle text-xs font-mono mb-1">Assets</p>
-                <p className="font-display font-bold text-2xl text-foreground">{MOCK_RWA.assets}</p>
-              </div>
-              <div>
-                <p className="text-foreground-subtle text-xs font-mono mb-1">Diversification</p>
-                <p className="font-display font-bold text-2xl text-foreground">{MOCK_RWA.diversificationIndex}%</p>
-              </div>
-              <div>
-                <p className="text-foreground-subtle text-xs font-mono mb-1">Collateralized</p>
-                <p className="font-display font-bold text-2xl text-risk-safe">{MOCK_RWA.collateralized ? "Yes" : "No"}</p>
-              </div>
+      <section className="pb-12">
+        <h2 className="font-display font-bold text-2xl mb-6">RWA Exposure</h2>
+        <div className="glass-card rounded-2xl p-8 border border-border">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            <div>
+              <p className="text-foreground-subtle text-xs font-mono mb-1">Total USD</p>
+              <p className="font-display font-bold text-2xl text-foreground">${MOCK_RWA.totalUsd.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-foreground-subtle text-xs font-mono mb-1">Assets</p>
+              <p className="font-display font-bold text-2xl text-foreground">{MOCK_RWA.assets}</p>
+            </div>
+            <div>
+              <p className="text-foreground-subtle text-xs font-mono mb-1">Diversification</p>
+              <p className="font-display font-bold text-2xl text-foreground">{MOCK_RWA.diversificationIndex}%</p>
+            </div>
+            <div>
+              <p className="text-foreground-subtle text-xs font-mono mb-1">Collateralized</p>
+              <p className="font-display font-bold text-2xl text-risk-safe">{MOCK_RWA.collateralized ? "Yes" : "No"}</p>
             </div>
           </div>
         </div>
       </section>
-
-      <FooterSection />
-    </div>
+    </>
   );
 }

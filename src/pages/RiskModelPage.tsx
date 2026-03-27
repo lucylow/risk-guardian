@@ -1,6 +1,3 @@
-import Navbar from "@/components/Navbar";
-import FooterSection from "@/components/FooterSection";
-import ScrollProgressBar from "@/components/ScrollProgressBar";
 import { useState } from "react";
 
 const SCENARIOS = [
@@ -25,17 +22,14 @@ export default function RiskModelPage() {
     : "High risk — significant MEV exposure and thin liquidity. Proceed with extreme caution.";
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-      <ScrollProgressBar />
-      <Navbar />
-
-      <section className="pt-28 pb-10 relative">
+    <>
+      <section className="pb-10 relative">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-accent/5 rounded-full blur-3xl" />
         </div>
-        <div className="container mx-auto px-4 text-center">
+        <div className="text-center">
           <div className="section-label mb-4 inline-flex">Documentation</div>
-          <h1 className="font-display font-bold text-5xl sm:text-6xl mb-4">
+          <h1 className="font-display font-bold text-4xl sm:text-5xl mb-4">
             Risk Model <span className="text-gradient">Explained</span>
           </h1>
           <p className="text-foreground-muted text-lg max-w-2xl mx-auto">
@@ -44,9 +38,8 @@ export default function RiskModelPage() {
         </div>
       </section>
 
-      <section className="pb-16">
-        <div className="container mx-auto px-4 max-w-3xl prose-custom">
-          {/* Inputs */}
+      <section className="pb-12">
+        <div className="max-w-3xl mx-auto">
           <h2 className="font-display font-bold text-2xl mb-4">Inputs</h2>
           <div className="glass-card rounded-xl p-6 border border-border mb-8">
             <ul className="space-y-2 text-foreground-muted text-sm">
@@ -58,7 +51,6 @@ export default function RiskModelPage() {
             </ul>
           </div>
 
-          {/* Components */}
           <h2 className="font-display font-bold text-2xl mb-4">Risk Components</h2>
           <div className="grid md:grid-cols-2 gap-4 mb-8">
             {[
@@ -77,7 +69,6 @@ export default function RiskModelPage() {
             ))}
           </div>
 
-          {/* Formula */}
           <h2 className="font-display font-bold text-2xl mb-4">Aggregation Formula</h2>
           <div className="glass-card rounded-xl p-6 border border-border mb-8">
             <pre className="font-mono text-sm text-foreground-muted whitespace-pre-wrap">{`riskScore = 0.4 × sandwichRisk
@@ -88,7 +79,6 @@ export default function RiskModelPage() {
 safetyScore = clamp(100 − riskScore, 0, 100)`}</pre>
           </div>
 
-          {/* Examples */}
           <h2 className="font-display font-bold text-2xl mb-4">Example Scenarios</h2>
           <div className="glass-card rounded-xl border border-border overflow-hidden mb-8">
             <table className="w-full text-sm">
@@ -117,7 +107,6 @@ safetyScore = clamp(100 − riskScore, 0, 100)`}</pre>
             </table>
           </div>
 
-          {/* Interactive widget */}
           <h2 className="font-display font-bold text-2xl mb-4">Try It</h2>
           <div className="glass-card rounded-xl p-6 border border-border">
             <label className="block text-foreground-muted text-sm font-mono mb-3">Safety Score: <span className={`font-bold ${tierCls}`}>{demoScore}</span></label>
@@ -129,8 +118,6 @@ safetyScore = clamp(100 − riskScore, 0, 100)`}</pre>
           </div>
         </div>
       </section>
-
-      <FooterSection />
-    </div>
+    </>
   );
 }

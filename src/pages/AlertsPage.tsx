@@ -1,6 +1,3 @@
-import Navbar from "@/components/Navbar";
-import FooterSection from "@/components/FooterSection";
-import ScrollProgressBar from "@/components/ScrollProgressBar";
 import { useState } from "react";
 
 interface AlertConfig {
@@ -36,17 +33,14 @@ export default function AlertsPage() {
     setConfig((c) => ({ ...c, [key]: value }));
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-      <ScrollProgressBar />
-      <Navbar />
-
-      <section className="pt-28 pb-10 relative">
+    <>
+      <section className="pb-10 relative">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-risk-danger/5 rounded-full blur-3xl" />
         </div>
-        <div className="container mx-auto px-4 text-center">
+        <div className="text-center">
           <div className="section-label mb-4 inline-flex">Alerts</div>
-          <h1 className="font-display font-bold text-5xl sm:text-6xl mb-4">
+          <h1 className="font-display font-bold text-4xl sm:text-5xl mb-4">
             Risk <span className="text-gradient">Alerts</span>
           </h1>
           <p className="text-foreground-muted text-lg max-w-2xl mx-auto">
@@ -57,7 +51,7 @@ export default function AlertsPage() {
 
       {/* Config */}
       <section className="pb-12">
-        <div className="container mx-auto px-4 max-w-2xl space-y-4">
+        <div className="max-w-2xl mx-auto space-y-4">
           {/* Safety */}
           <div className="glass-card rounded-xl p-6 border border-border">
             <div className="flex items-center justify-between mb-3">
@@ -127,8 +121,8 @@ export default function AlertsPage() {
       </section>
 
       {/* Alert History */}
-      <section className="pb-24">
-        <div className="container mx-auto px-4 max-w-2xl">
+      <section className="pb-12">
+        <div className="max-w-2xl mx-auto">
           <h2 className="font-display font-bold text-2xl mb-6">Recent Alerts</h2>
           <div className="space-y-3">
             {MOCK_ALERTS.map((a) => (
@@ -149,8 +143,6 @@ export default function AlertsPage() {
           </div>
         </div>
       </section>
-
-      <FooterSection />
-    </div>
+    </>
   );
 }

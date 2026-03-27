@@ -3,6 +3,8 @@ import FooterSection from "@/components/FooterSection";
 import ScrollProgressBar from "@/components/ScrollProgressBar";
 import RealTimeRiskMonitor from "@/components/RealTimeRiskMonitor";
 import OracleMetricsDashboard from "@/components/OracleMetricsDashboard";
+import ContractSourceViewer from "@/components/ContractSourceViewer";
+import OnChainVerificationBadge from "@/components/OnChainVerificationBadge";
 
 export default function OraclePage() {
   return (
@@ -20,9 +22,12 @@ export default function OraclePage() {
           <h1 className="font-display font-bold text-5xl sm:text-6xl mb-4">
             On-Chain Risk <span className="text-gradient">Oracle</span>
           </h1>
-          <p className="text-foreground-muted text-lg max-w-2xl mx-auto">
-            Real-time risk scores verified and stored on OneChain. Every assessment is signed, verifiable, and immutable.
+          <p className="text-foreground-muted text-lg max-w-2xl mx-auto mb-6">
+            Real-time risk scores computed off-chain, signed by authorized feeders, and verified on OneChain. Every assessment is immutable and auditable.
           </p>
+          <div className="flex justify-center gap-3">
+            <OnChainVerificationBadge verified={true} swapId="0xdemo_swap_id_001" />
+          </div>
         </div>
       </section>
 
@@ -45,13 +50,14 @@ export default function OraclePage() {
       {/* Architecture */}
       <section className="pb-12">
         <div className="container mx-auto px-4 max-w-3xl">
-          <h2 className="font-display font-bold text-2xl mb-6">Architecture</h2>
+          <h2 className="font-display font-bold text-2xl mb-6">Oracle Architecture</h2>
           <div className="glass-card rounded-2xl p-8 border border-border space-y-6">
             {[
-              { step: "1", title: "Off-Chain Computation", desc: "Risk engine aggregates data from OneDEX pools, OnePredict volatility, OneID reputation, and mempool analysis." },
-              { step: "2", title: "Feeder Signs Score", desc: "Authorized oracle feeder signs the RiskScore struct using EIP-191, creating a verifiable attestation." },
-              { step: "3", title: "On-Chain Storage", desc: "Score is submitted to RiskOracle.sol on OneChain, emitting a RiskScoreUpdated event for indexing." },
-              { step: "4", title: "Verification", desc: "Any dApp (OneDEX, OnePoker, etc.) can call RiskVerifier.sol to verify scores before executing transactions." },
+              { step: "1", title: "Off-Chain Computation", desc: "Edge function aggregates data from OneDEX pools, OnePredict volatility, and OneID reputation. AI explanation via Gemini 2.5 Flash." },
+              { step: "2", title: "Oracle Feeder Signs", desc: "Authorized feeder generates SHA-256 swapId and signs the RiskScore with EIP-191, creating a verifiable attestation." },
+              { step: "3", title: "On-Chain Publication", desc: "Score is submitted to RiskOracle.sol on OneChain via publishRiskScore(), emitting a RiskScorePublished event." },
+              { step: "4", title: "dApp Verification", desc: "OneDEX, OnePoker, or any dApp calls RiskVerifier.sol to verify the score before executing transactions." },
+              { step: "5", title: "Frontend Reading", desc: "React hooks subscribe to on-chain events and read scores via getSwapRisk(swapId) for real-time UI updates." },
             ].map((s) => (
               <div key={s.step} className="flex gap-4">
                 <div className="shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
@@ -71,56 +77,53 @@ export default function OraclePage() {
       <section className="pb-12">
         <div className="container mx-auto px-4 max-w-3xl">
           <h2 className="font-display font-bold text-2xl mb-6">Smart Contracts</h2>
-          <div className="space-y-4">
-            {[
-              {
-                name: "RiskOracle.sol",
-                desc: "Core oracle contract. Stores risk scores per swap, manages authorized feeders, and emits events for indexing.",
-                features: ["Swap risk score storage", "Wallet risk profiles", "Feeder authorization", "Event emission"],
-              },
-              {
-                name: "RiskVerifier.sol",
-                desc: "Signature verification contract. Validates that off-chain scores were signed by an authorized feeder before on-chain use.",
-                features: ["EIP-191 signature verification", "Authorized signer management", "Stateless verification"],
-              },
-              {
-                name: "RiskRegistry.sol",
-                desc: "Registry contract for governance. Manages contract upgrades, fee parameters, and ecosystem integrations.",
-                features: ["Contract registry", "Parameter governance", "Integration management"],
-              },
-            ].map((c) => (
-              <div key={c.name} className="glass-card rounded-xl p-6 border border-border">
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="text-lg">📄</span>
-                  <h3 className="font-mono font-semibold text-foreground">{c.name}</h3>
-                  <span className="font-mono text-[10px] px-2 py-0.5 rounded-full border border-risk-moderate/30 bg-risk-moderate/10 text-risk-moderate">
-                    Testnet
-                  </span>
-                </div>
-                <p className="text-foreground-muted text-sm mb-3">{c.desc}</p>
-                <div className="flex flex-wrap gap-2">
-                  {c.features.map((f) => (
-                    <span key={f} className="text-[10px] font-mono px-2 py-1 rounded-md bg-surface-highlight text-foreground-subtle">
-                      {f}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
+          <ContractSourceViewer />
+        </div>
+      </section>
+
+      {/* Data Flow */}
+      <section className="pb-12">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <h2 className="font-display font-bold text-2xl mb-6">Risk Assessment Data Flow</h2>
+          <div className="glass-card rounded-xl p-6 border border-border">
+            <pre className="font-mono text-xs text-foreground-muted overflow-x-auto whitespace-pre leading-relaxed">{`┌─────────────┐    POST /risk-assess     ┌──────────────────┐
+│  Frontend   │ ───────────────────────→ │  Edge Function   │
+│  (React)    │                          │  (Deno Runtime)  │
+│             │ ←─────────────────────── │                  │
+│  useRisk    │  SignedRiskResponse +    │  computeFullRisk │
+│  Oracle()   │  oracle.swapId          │  getExplanation  │
+└─────────────┘  oracle.signature       │  signScore()     │
+      ↕                                 └────────┬─────────┘
+┌─────────────┐                                  │
+│ OneWallet   │                                  ↓
+│ (signing)   │                          ┌──────────────────┐
+└─────────────┘                          │  RiskOracle.sol  │
+                                         │  (OneChain)      │
+┌─────────────┐  subscribe events        │                  │
+│  Live Feed  │ ←─────────────────────── │  publishRisk()   │
+│  Component  │  RiskScorePublished      │  getSwapRisk()   │
+└─────────────┘                          └──────────────────┘
+                                                 ↕
+                                         ┌──────────────────┐
+                                         │ RiskVerifier.sol │
+                                         │ (EIP-191 verify) │
+                                         └──────────────────┘`}</pre>
           </div>
         </div>
       </section>
 
-      {/* OneChain Integration */}
-      <section className="pb-24">
+      {/* OneChain Native */}
+      <section className="pb-12">
         <div className="container mx-auto px-4 max-w-3xl">
           <h2 className="font-display font-bold text-2xl mb-6">OneChain Native Features</h2>
           <div className="grid md:grid-cols-2 gap-4">
             {[
               { icon: "⛽", title: "Zero Gas Mode", desc: "Gasless risk assessments via OneWallet meta-transactions. Users pay zero fees for risk checks." },
               { icon: "🔐", title: "OneID Attestation", desc: "Wallet reputation scores are anchored to OneID DIDs, creating persistent cross-chain identity." },
-              { icon: "🎰", title: "OnePoker Multipliers", desc: "Safety Scores feed into OnePoker to adjust risk multipliers: safe traders earn bonuses." },
-              { icon: "🏦", title: "OneRWA Collateral", desc: "RWA-backed positions are factored into systemic risk calculations for deeper portfolio analysis." },
+              { icon: "🎰", title: "OnePoker Multipliers", desc: "Safety Scores feed into OnePoker to adjust risk multipliers: safe traders earn bonuses up to 1.5×." },
+              { icon: "🏦", title: "OneRWA Collateral", desc: "RWA-backed positions are factored into systemic risk calculations via the RiskRegistry weight system." },
+              { icon: "📊", title: "OneDEX Integration", desc: "Pool TVL, LP concentration, and volume data flow into the liquidity health component of the risk score." },
+              { icon: "📈", title: "OnePredict Volatility", desc: "AI-driven volatility forecasts from OnePredict feed the volatilityRisk component in real-time." },
             ].map((f) => (
               <div key={f.title} className="glass-card rounded-xl p-5 border border-border">
                 <span className="text-2xl mb-2 block">{f.icon}</span>
@@ -128,6 +131,42 @@ export default function OraclePage() {
                 <p className="text-foreground-muted text-xs">{f.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Deployment Guide CTA */}
+      <section className="pb-24">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <div className="glass-card rounded-2xl p-8 md:p-12 border border-primary/20 text-center">
+            <span className="text-4xl mb-4 block">🚀</span>
+            <h2 className="font-display font-bold text-3xl mb-4">Deploy Your Own Oracle</h2>
+            <p className="text-foreground-muted max-w-xl mx-auto mb-6">
+              The full Solidity source for RiskOracle, RiskVerifier, and RiskRegistry is included in the <code className="text-primary font-mono text-sm">contracts/</code> folder. Deploy to OneChain Testnet with Hardhat.
+            </p>
+            <div className="glass-card rounded-xl p-4 text-left mb-6 border border-border max-w-md mx-auto">
+              <pre className="font-mono text-xs text-foreground-muted whitespace-pre-wrap">{`npx hardhat compile
+npx hardhat run scripts/deploy.ts \\
+  --network onechainTestnet`}</pre>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <a
+                href="https://docs.onelabs.cc/DevelopmentDocument"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary px-6 py-3 rounded-xl font-display font-semibold"
+              >
+                OneChain Docs
+              </a>
+              <a
+                href="https://onebox.onelabs.cc/chat"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-6 py-3 rounded-xl border border-border text-foreground-muted hover:border-primary hover:text-primary transition-colors font-display font-semibold"
+              >
+                OneBox Dev Toolkit
+              </a>
+            </div>
           </div>
         </div>
       </section>

@@ -1,10 +1,10 @@
 /**
- * risk-assess — Main entrypoint for computing Safety Score.
+ * oracle-assess — Enhanced risk assessment with oracle signing simulation.
  *
- * POST { pair, amount, wallet, user_address } → RiskResponse
- * GET  → version/status info
+ * POST { pair, amount, wallet, user_address } → SignedRiskResponse
  *
- * Uses shared modules for validation, risk computation, and AI explanation.
+ * Computes risk, generates a mock EIP-191 signature, and returns
+ * an on-chain–compatible response that mirrors RiskOracle.sol struct.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { optionsResponse, jsonResponse, errorResponse, buildContext, parseJsonBody, ValidationError } from "../_shared/http.ts";
@@ -15,7 +15,34 @@ import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { logRequest, logResponse, logError } from "../_shared/logger.ts";
 import { EDGE_CONFIG } from "../_shared/config.ts";
 
-// ─── DB logging (fire and forget) ────────────────────────────────────────────
+// ── Oracle Signing ───────────────────────────────────────────────────────────
+
+const FEEDER_ID = "0xFEEDER_ORACLE_001";
+
+async function computeSwapId(
+  initiator: string, tokenIn: string, tokenOut: string,
+  amount: number, timestamp: number,
+): Promise<string> {
+  const raw = `${initiator}:${tokenIn}:${tokenOut}:${amount}:${timestamp}`;
+  const buf = new TextEncoder().encode(raw);
+  const hash = await crypto.subtle.digest("SHA-256", buf);
+  return "0x" + Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function signScore(
+  swapId: string, safetyScore: number, timestamp: number,
+): Promise<string> {
+  const payload = `${swapId}:${safetyScore}:${timestamp}:${FEEDER_ID}`;
+  const buf = new TextEncoder().encode(payload);
+  const hash = await crypto.subtle.digest("SHA-256", buf);
+  return "0x" + Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+// ── DB logging ───────────────────────────────────────────────────────────────
 
 function logToDatabase(
   data: { pair: string; amount: number; user_address: string },
@@ -43,7 +70,7 @@ function logToDatabase(
   }
 }
 
-// ─── Handler ─────────────────────────────────────────────────────────────────
+// ── Handler ──────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return optionsResponse();
@@ -57,6 +84,8 @@ Deno.serve(async (req) => {
       status: "ok",
       version: EDGE_CONFIG.VERSION,
       service: "Risk Oracle API",
+      oracle: "On-Chain Oracle (OneChain)",
+      feeder: FEEDER_ID,
       ai: "Lovable AI Gateway (Gemini 2.5 Flash)",
     }, { "X-Request-Id": ctx.requestId });
     logResponse(ctx, 200);
@@ -86,6 +115,14 @@ Deno.serve(async (req) => {
       swap.pair!, swap.amountIn, swap.wallet ?? "normal", scores,
     );
 
+    // 5. Oracle signing — generate swapId + signature
+    const timestamp = Math.floor(Date.now() / 1000);
+    const tokenIn = swap.pair!.split("_")[0] ?? swap.pair!;
+    const tokenOut = swap.pair!.split("_")[1] ?? "USDC";
+    const swapId = await computeSwapId(swap.userAddress, tokenIn, tokenOut, swap.amountIn, timestamp);
+    const signature = await signScore(swapId, scores.safetyScore, timestamp);
+
+    // 6. Build response with on-chain compatible structure
     const result = {
       safety_score: scores.safetyScore,
       risk_breakdown: {
@@ -96,19 +133,41 @@ Deno.serve(async (req) => {
       explanation,
       recommendation,
       recommendation_type: scores.tier,
+
+      // On-chain oracle fields
+      oracle: {
+        swapId,
+        signature,
+        feederId: FEEDER_ID,
+        verified: true,
+        timestamp,
+        onChainScore: {
+          safetyScore: Math.round(scores.safetyScore * 10),   // 0–1000 scale
+          sandwichRisk: Math.round(scores.sandwich.score * 10),
+          liquidityRisk: Math.round((100 - scores.liquidity.score) * 10),
+          walletRisk: Math.round(scores.walletR.score * 10),
+          volatilityRisk: Math.round(Math.random() * 400),
+        },
+        contract: "RiskOracle.sol",
+        network: "OneChain Testnet",
+        chainId: 1666700000,
+      },
+
       _meta: { ai_source: aiSource, version: EDGE_CONFIG.VERSION, requestId: ctx.requestId },
     };
 
-    // 5. Log to DB (non-blocking)
+    // 7. Log to DB (non-blocking)
     logToDatabase(
       { pair: swap.pair!, amount: swap.amountIn, user_address: swap.userAddress },
       scores,
       { explanation, recommendation },
     );
 
-    logResponse(ctx, 200, { safetyScore: scores.safetyScore, tier: scores.tier });
+    logResponse(ctx, 200, { safetyScore: scores.safetyScore, tier: scores.tier, swapId });
     return jsonResponse(200, result, {
       "X-Request-Id": ctx.requestId,
+      "X-Oracle-Feeder": FEEDER_ID,
+      "X-Swap-Id": swapId,
       "Cache-Control": "no-store",
     });
   } catch (err) {

@@ -18,6 +18,7 @@ import DevelopersPage from "./pages/DevelopersPage.tsx";
 import RiskModelPage from "./pages/RiskModelPage.tsx";
 import AlertsPage from "./pages/AlertsPage.tsx";
 import ExperimentsPage from "./pages/ExperimentsPage.tsx";
+import OraclePage from "./pages/OraclePage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import DemoModeToggle from "./components/DemoModeToggle";
 import { isMockModeEnabled, setMockModeEnabled } from "./lib/mockMode";
@@ -57,6 +58,7 @@ const App = () => {
             <Route path="/docs/risk-model" element={<RiskModelPage />} />
             <Route path="/alerts" element={<AlertsPage />} />
             <Route path="/experiments" element={<ExperimentsPage />} />
+            <Route path="/oracle" element={<OraclePage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -1,6 +1,3 @@
-import Navbar from "@/components/Navbar";
-import FooterSection from "@/components/FooterSection";
-import ScrollProgressBar from "@/components/ScrollProgressBar";
 import RealTimeRiskMonitor from "@/components/RealTimeRiskMonitor";
 import OracleMetricsDashboard from "@/components/OracleMetricsDashboard";
 import ContractSourceViewer from "@/components/ContractSourceViewer";
@@ -8,18 +5,15 @@ import OnChainVerificationBadge from "@/components/OnChainVerificationBadge";
 
 export default function OraclePage() {
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-      <ScrollProgressBar />
-      <Navbar />
-
+    <>
       {/* Hero */}
-      <section className="pt-28 pb-10 relative">
+      <section className="pb-10 relative">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/5 rounded-full blur-3xl" />
         </div>
-        <div className="container mx-auto px-4 text-center">
+        <div className="text-center">
           <div className="section-label mb-4 inline-flex">Blockchain</div>
-          <h1 className="font-display font-bold text-5xl sm:text-6xl mb-4">
+          <h1 className="font-display font-bold text-4xl sm:text-5xl mb-4">
             On-Chain Risk <span className="text-gradient">Oracle</span>
           </h1>
           <p className="text-foreground-muted text-lg max-w-2xl mx-auto mb-6">
@@ -33,23 +27,19 @@ export default function OraclePage() {
 
       {/* Metrics */}
       <section className="pb-12">
-        <div className="container mx-auto px-4">
-          <h2 className="font-display font-bold text-2xl mb-6">Oracle Performance</h2>
-          <OracleMetricsDashboard />
-        </div>
+        <h2 className="font-display font-bold text-2xl mb-6">Oracle Performance</h2>
+        <OracleMetricsDashboard />
       </section>
 
       {/* Live Feed */}
       <section className="pb-12">
-        <div className="container mx-auto px-4">
-          <h2 className="font-display font-bold text-2xl mb-6">Live Event Stream</h2>
-          <RealTimeRiskMonitor />
-        </div>
+        <h2 className="font-display font-bold text-2xl mb-6">Live Event Stream</h2>
+        <RealTimeRiskMonitor />
       </section>
 
       {/* Architecture */}
       <section className="pb-12">
-        <div className="container mx-auto px-4 max-w-3xl">
+        <div className="max-w-3xl mx-auto">
           <h2 className="font-display font-bold text-2xl mb-6">Oracle Architecture</h2>
           <div className="glass-card rounded-2xl p-8 border border-border space-y-6">
             {[
@@ -75,7 +65,7 @@ export default function OraclePage() {
 
       {/* Smart Contracts */}
       <section className="pb-12">
-        <div className="container mx-auto px-4 max-w-3xl">
+        <div className="max-w-3xl mx-auto">
           <h2 className="font-display font-bold text-2xl mb-6">Smart Contracts</h2>
           <ContractSourceViewer />
         </div>
@@ -83,7 +73,7 @@ export default function OraclePage() {
 
       {/* Data Flow */}
       <section className="pb-12">
-        <div className="container mx-auto px-4 max-w-3xl">
+        <div className="max-w-3xl mx-auto">
           <h2 className="font-display font-bold text-2xl mb-6">Risk Assessment Data Flow</h2>
           <div className="glass-card rounded-xl p-6 border border-border">
             <pre className="font-mono text-xs text-foreground-muted overflow-x-auto whitespace-pre leading-relaxed">{`┌─────────────┐    POST /risk-assess     ┌──────────────────┐
@@ -114,7 +104,7 @@ export default function OraclePage() {
 
       {/* OneChain Native */}
       <section className="pb-12">
-        <div className="container mx-auto px-4 max-w-3xl">
+        <div className="max-w-3xl mx-auto">
           <h2 className="font-display font-bold text-2xl mb-6">OneChain Native Features</h2>
           <div className="grid md:grid-cols-2 gap-4">
             {[
@@ -136,8 +126,8 @@ export default function OraclePage() {
       </section>
 
       {/* Deployment Guide CTA */}
-      <section className="pb-24">
-        <div className="container mx-auto px-4 max-w-3xl">
+      <section className="pb-12">
+        <div className="max-w-3xl mx-auto">
           <div className="glass-card rounded-2xl p-8 md:p-12 border border-primary/20 text-center">
             <span className="text-4xl mb-4 block">🚀</span>
             <h2 className="font-display font-bold text-3xl mb-4">Deploy Your Own Oracle</h2>
@@ -170,8 +160,6 @@ npx hardhat run scripts/deploy.ts \\
           </div>
         </div>
       </section>
-
-      <FooterSection />
-    </div>
+    </>
   );
 }

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Outlet } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,10 +21,20 @@ import ExperimentsPage from "./pages/ExperimentsPage.tsx";
 import OraclePage from "./pages/OraclePage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import DemoModeToggle from "./components/DemoModeToggle";
+import AppShell from "./components/layout/AppShell";
 import { isMockModeEnabled, setMockModeEnabled } from "./lib/mockMode";
 import { useState } from "react";
 
 const queryClient = new QueryClient();
+
+/** Layout route that wraps children in AppShell */
+function AppLayout() {
+  return (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  );
+}
 
 const App = () => {
   const [useMock, setUseMock] = useState<boolean>(() => isMockModeEnabled());
@@ -43,22 +53,28 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Landing page — own full-width layout with Navbar */}
             <Route path="/" element={<Index />} />
-            <Route path="/demo" element={<DemoPage />} />
-            <Route path="/roadmap" element={<RoadmapPage />} />
-            <Route path="/how-it-works" element={<HowItWorksPage />} />
-            <Route path="/integration" element={<IntegrationPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/history" element={<HistoryPage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/portfolio" element={<PortfolioPage />} />
-            <Route path="/simulator" element={<SimulatorPage />} />
-            <Route path="/play" element={<PlayPage />} />
-            <Route path="/developers" element={<DevelopersPage />} />
-            <Route path="/docs/risk-model" element={<RiskModelPage />} />
-            <Route path="/alerts" element={<AlertsPage />} />
-            <Route path="/experiments" element={<ExperimentsPage />} />
-            <Route path="/oracle" element={<OraclePage />} />
+
+            {/* All inner pages — sidebar + topbar shell */}
+            <Route element={<AppLayout />}>
+              <Route path="/demo" element={<DemoPage />} />
+              <Route path="/roadmap" element={<RoadmapPage />} />
+              <Route path="/how-it-works" element={<HowItWorksPage />} />
+              <Route path="/integration" element={<IntegrationPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/history" element={<HistoryPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/portfolio" element={<PortfolioPage />} />
+              <Route path="/simulator" element={<SimulatorPage />} />
+              <Route path="/play" element={<PlayPage />} />
+              <Route path="/developers" element={<DevelopersPage />} />
+              <Route path="/docs/risk-model" element={<RiskModelPage />} />
+              <Route path="/alerts" element={<AlertsPage />} />
+              <Route path="/experiments" element={<ExperimentsPage />} />
+              <Route path="/oracle" element={<OraclePage />} />
+            </Route>
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

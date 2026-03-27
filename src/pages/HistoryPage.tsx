@@ -14,9 +14,6 @@ import {
   Area,
   AreaChart,
 } from "recharts";
-import Navbar from "@/components/Navbar";
-import FooterSection from "@/components/FooterSection";
-import ScrollProgressBar from "@/components/ScrollProgressBar";
 import { supabase } from "@/integrations/supabase/client";
 import { useWallet } from "@/hooks/useWallet";
 import { isMockModeEnabled } from "@/lib/mockMode";
@@ -160,12 +157,10 @@ export default function HistoryPage() {
   const gradientId = "scoreGradient";
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-      <ScrollProgressBar />
-      <Navbar />
-      <main className="container mx-auto px-4 pt-28 pb-20 max-w-4xl">
-        {/* Header */}
-        <div className="mb-10">
+    <div className="max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="mb-10">
+        <div className="section-label mb-4">On-Chain Records</div>
           <div className="section-label mb-4">On-Chain Records</div>
           <h1 className="font-display font-bold text-4xl mb-2">
             Assessment <span className="text-gradient">History</span>
@@ -445,8 +440,6 @@ export default function HistoryPage() {
             })}
           </div>
         )}
-      </main>
-      <FooterSection />
-    </div>
+      </div>
   );
 }

@@ -2,9 +2,6 @@
  * SettingsPage — manage risk preferences, persisted via user-settings edge function.
  */
 import { useState, useEffect } from "react";
-import Navbar from "@/components/Navbar";
-import FooterSection from "@/components/FooterSection";
-import ScrollProgressBar from "@/components/ScrollProgressBar";
 import { useWallet } from "@/hooks/useWallet";
 import { getUserSettings, saveUserSettings, type UserSettings } from "@/services/riskOracle";
 
@@ -71,7 +68,6 @@ export default function SettingsPage() {
   const [saveState, setSaveState]   = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Load settings from edge function on mount / wallet change
   useEffect(() => {
     setLoadState("loading");
     getUserSettings(wallet)
@@ -112,146 +108,101 @@ export default function SettingsPage() {
       : "Conservative — only the most dangerous trades are blocked";
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-      <ScrollProgressBar />
-      <Navbar />
-      <main className="container mx-auto px-4 pt-28 pb-20 max-w-2xl">
-        {/* Header */}
-        <div className="mb-10">
-          <div className="section-label mb-4">Preferences</div>
-          <h1 className="font-display font-bold text-4xl mb-2">
-            Risk <span className="text-gradient">Settings</span>
-          </h1>
-          <p className="text-foreground-muted">Configure how the Oracle protects your swaps on OneDEX.</p>
+    <div className="max-w-2xl mx-auto">
+      {/* Header */}
+      <div className="mb-10">
+        <div className="section-label mb-4">Preferences</div>
+        <h1 className="font-display font-bold text-4xl mb-2">
+          Risk <span className="text-gradient">Settings</span>
+        </h1>
+        <p className="text-foreground-muted">Configure how the Oracle protects your swaps on OneDEX.</p>
 
-          <div className="flex items-center gap-3 mt-4 flex-wrap">
-            {shortAddress && (
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-raised border border-border">
-                <div className="w-2 h-2 rounded-full bg-risk-safe animate-pulse" />
-                <span className="font-mono text-xs text-foreground-muted">Wallet: {shortAddress}</span>
+        <div className="flex items-center gap-3 mt-4 flex-wrap">
+          {shortAddress && (
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-raised border border-border">
+              <div className="w-2 h-2 rounded-full bg-risk-safe animate-pulse" />
+              <span className="font-mono text-xs text-foreground-muted">Wallet: {shortAddress}</span>
+            </div>
+          )}
+          {loadState === "loading" && (
+            <span className="text-xs font-mono text-foreground-subtle animate-pulse">Loading settings…</span>
+          )}
+          {loadState === "error" && (
+            <span className="text-xs font-mono text-risk-moderate">⚠ Using defaults — cloud sync unavailable</span>
+          )}
+          {loadState === "ready" && wallet !== "0xdemo_user" && (
+            <span className="text-xs font-mono text-risk-safe">✓ Synced with cloud</span>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <SettingRow icon="🛡️" title="Auto-Protect" description="Automatically route high-risk swaps through a private mempool to avoid MEV bots.">
+          <Toggle enabled={settings.auto_protect_enabled} onChange={(v) => update("auto_protect_enabled", v)} label="Auto-protect" />
+        </SettingRow>
+
+        <div className="glass-card rounded-2xl p-6 hover:border-primary/30 transition-colors">
+          <div className="flex items-start gap-4 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-lg shrink-0">🎯</div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <p className="font-display font-semibold text-foreground">Risk Threshold</p>
+                <span className="font-mono text-2xl font-bold text-primary">{settings.risk_threshold}</span>
               </div>
-            )}
-            {loadState === "loading" && (
-              <span className="text-xs font-mono text-foreground-subtle animate-pulse">Loading settings…</span>
-            )}
-            {loadState === "error" && (
-              <span className="text-xs font-mono text-risk-moderate">⚠ Using defaults — cloud sync unavailable</span>
-            )}
-            {loadState === "ready" && wallet !== "0xdemo_user" && (
-              <span className="text-xs font-mono text-risk-safe">✓ Synced with cloud</span>
-            )}
+              <p className="text-sm text-foreground-muted mt-0.5">Auto-protect triggers when Safety Score falls below this value.</p>
+            </div>
+          </div>
+          <input type="range" min={0} max={100} step={5} value={settings.risk_threshold} onChange={(e) => update("risk_threshold", Number(e.target.value))} className="w-full mb-3" style={{ accentColor: "hsl(var(--primary))" }} aria-label="Risk threshold" />
+          <div className="flex justify-between text-xs font-mono text-foreground-subtle mb-3">
+            <span>0 — Max protection</span><span>100 — No protection</span>
+          </div>
+          <div className="px-3 py-2 rounded-lg bg-primary/8 border border-primary/20">
+            <p className="text-xs font-mono text-primary">{thresholdLabel}</p>
           </div>
         </div>
 
-        <div className="space-y-3">
-          {/* Auto-protect */}
-          <SettingRow
-            icon="🛡️"
-            title="Auto-Protect"
-            description="Automatically route high-risk swaps through a private mempool to avoid MEV bots."
+        <SettingRow icon="⚡" title="Auto-Adjust Slippage" description="Increase slippage tolerance automatically for high-risk swaps to prevent transaction failures.">
+          <Toggle enabled={settings.auto_adjust_slippage} onChange={(v) => update("auto_adjust_slippage", v)} label="Auto-adjust slippage" />
+        </SettingRow>
+
+        <SettingRow icon="🔔" title="High-Risk Alerts" description="Receive an in-app alert whenever a dangerous swap is detected before confirmation.">
+          <Toggle enabled={settings.notify_on_high_risk} onChange={(v) => update("notify_on_high_risk", v)} label="High-risk notifications" />
+        </SettingRow>
+
+        <div className="pt-2">
+          <button
+            onClick={save}
+            disabled={!hasChanges || saveState === "saving"}
+            className={`w-full py-3.5 rounded-xl font-display font-semibold text-base transition-all flex items-center justify-center gap-2 ${
+              saveState === "saved"
+                ? "bg-risk-safe/20 border border-risk-safe/30 text-risk-safe cursor-default"
+                : saveState === "error"
+                ? "bg-risk-danger/20 border border-risk-danger/30 text-risk-danger cursor-default"
+                : saveState === "saving"
+                ? "btn-primary opacity-70 cursor-wait"
+                : hasChanges
+                ? "btn-primary"
+                : "bg-surface-highlight text-foreground-subtle cursor-not-allowed"
+            }`}
           >
-            <Toggle
-              enabled={settings.auto_protect_enabled}
-              onChange={(v) => update("auto_protect_enabled", v)}
-              label="Auto-protect"
-            />
-          </SettingRow>
-
-          {/* Risk threshold slider */}
-          <div className="glass-card rounded-2xl p-6 hover:border-primary/30 transition-colors">
-            <div className="flex items-start gap-4 mb-5">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-lg shrink-0">
-                🎯
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <p className="font-display font-semibold text-foreground">Risk Threshold</p>
-                  <span className="font-mono text-2xl font-bold text-primary">{settings.risk_threshold}</span>
-                </div>
-                <p className="text-sm text-foreground-muted mt-0.5">
-                  Auto-protect triggers when Safety Score falls below this value.
-                </p>
-              </div>
-            </div>
-            <input
-              type="range" min={0} max={100} step={5}
-              value={settings.risk_threshold}
-              onChange={(e) => update("risk_threshold", Number(e.target.value))}
-              className="w-full mb-3"
-              style={{ accentColor: "hsl(var(--primary))" }}
-              aria-label="Risk threshold"
-            />
-            <div className="flex justify-between text-xs font-mono text-foreground-subtle mb-3">
-              <span>0 — Max protection</span><span>100 — No protection</span>
-            </div>
-            <div className="px-3 py-2 rounded-lg bg-primary/8 border border-primary/20">
-              <p className="text-xs font-mono text-primary">{thresholdLabel}</p>
-            </div>
-          </div>
-
-          {/* Auto-adjust slippage */}
-          <SettingRow
-            icon="⚡"
-            title="Auto-Adjust Slippage"
-            description="Increase slippage tolerance automatically for high-risk swaps to prevent transaction failures."
-          >
-            <Toggle
-              enabled={settings.auto_adjust_slippage}
-              onChange={(v) => update("auto_adjust_slippage", v)}
-              label="Auto-adjust slippage"
-            />
-          </SettingRow>
-
-          {/* Notifications */}
-          <SettingRow
-            icon="🔔"
-            title="High-Risk Alerts"
-            description="Receive an in-app alert whenever a dangerous swap is detected before confirmation."
-          >
-            <Toggle
-              enabled={settings.notify_on_high_risk}
-              onChange={(v) => update("notify_on_high_risk", v)}
-              label="High-risk notifications"
-            />
-          </SettingRow>
-
-          {/* Save button */}
-          <div className="pt-2">
-            <button
-              onClick={save}
-              disabled={!hasChanges || saveState === "saving"}
-              className={`w-full py-3.5 rounded-xl font-display font-semibold text-base transition-all flex items-center justify-center gap-2 ${
-                saveState === "saved"
-                  ? "bg-risk-safe/20 border border-risk-safe/30 text-risk-safe cursor-default"
-                  : saveState === "error"
-                  ? "bg-risk-danger/20 border border-risk-danger/30 text-risk-danger cursor-default"
-                  : saveState === "saving"
-                  ? "btn-primary opacity-70 cursor-wait"
-                  : hasChanges
-                  ? "btn-primary"
-                  : "bg-surface-highlight text-foreground-subtle cursor-not-allowed"
-              }`}
-            >
-              {saveState === "saving" && (
-                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                </svg>
-              )}
-              {saveState === "saved"  ? "✓ Settings Saved to Cloud" :
-               saveState === "error"  ? "✕ Save Failed — Try Again" :
-               saveState === "saving" ? "Saving…" :
-               hasChanges             ? "Save Settings" :
-               "No Changes"}
-            </button>
-          </div>
-
-          <p className="text-xs text-center text-foreground-subtle font-mono pt-1">
-            Settings are synced to the cloud and applied to all future swap assessments.
-          </p>
+            {saveState === "saving" && (
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+            )}
+            {saveState === "saved"  ? "✓ Settings Saved to Cloud" :
+             saveState === "error"  ? "✕ Save Failed — Try Again" :
+             saveState === "saving" ? "Saving…" :
+             hasChanges             ? "Save Settings" :
+             "No Changes"}
+          </button>
         </div>
-      </main>
-      <FooterSection />
+
+        <p className="text-xs text-center text-foreground-subtle font-mono pt-1">
+          Settings are synced to the cloud and applied to all future swap assessments.
+        </p>
+      </div>
     </div>
   );
 }

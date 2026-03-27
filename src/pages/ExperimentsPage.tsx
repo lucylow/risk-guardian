@@ -1,6 +1,3 @@
-import Navbar from "@/components/Navbar";
-import FooterSection from "@/components/FooterSection";
-import ScrollProgressBar from "@/components/ScrollProgressBar";
 import { useState } from "react";
 
 type RiskModelVariant = "baseline" | "volatilityHeavy" | "walletReputationHeavy";
@@ -31,17 +28,14 @@ export default function ExperimentsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-      <ScrollProgressBar />
-      <Navbar />
-
-      <section className="pt-28 pb-10 relative">
+    <>
+      <section className="pb-10 relative">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/5 rounded-full blur-3xl" />
         </div>
-        <div className="container mx-auto px-4 text-center">
+        <div className="text-center">
           <div className="section-label mb-4 inline-flex">Experiments</div>
-          <h1 className="font-display font-bold text-5xl sm:text-6xl mb-4">
+          <h1 className="font-display font-bold text-4xl sm:text-5xl mb-4">
             Feature <span className="text-gradient">Lab</span>
           </h1>
           <p className="text-foreground-muted text-lg max-w-2xl mx-auto">
@@ -51,8 +45,7 @@ export default function ExperimentsPage() {
       </section>
 
       <section className="pb-12">
-        <div className="container mx-auto px-4 max-w-3xl">
-          {/* Risk Model Variants */}
+        <div className="max-w-3xl mx-auto">
           <h2 className="font-display font-bold text-2xl mb-6">Risk Model Variant</h2>
           <div className="space-y-3 mb-12">
             {MODEL_VARIANTS.map((v) => (
@@ -75,7 +68,6 @@ export default function ExperimentsPage() {
             ))}
           </div>
 
-          {/* Integration Mode */}
           <h2 className="font-display font-bold text-2xl mb-6">Integration Status</h2>
           <div className="glass-card rounded-xl border border-border overflow-hidden mb-12">
             {INTEGRATIONS.map((int, i) => (
@@ -92,7 +84,6 @@ export default function ExperimentsPage() {
             ))}
           </div>
 
-          {/* Latency Info */}
           <h2 className="font-display font-bold text-2xl mb-6">Performance Benchmarks</h2>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="glass-card rounded-xl p-6 border border-border text-center">
@@ -108,8 +99,6 @@ export default function ExperimentsPage() {
           </div>
         </div>
       </section>
-
-      <FooterSection />
-    </div>
+    </>
   );
 }

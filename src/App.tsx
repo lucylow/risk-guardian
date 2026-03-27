@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Outlet } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -27,6 +27,15 @@ import { useState } from "react";
 
 const queryClient = new QueryClient();
 
+/** Layout route that wraps children in AppShell */
+function AppLayout() {
+  return (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  );
+}
+
 const App = () => {
   const [useMock, setUseMock] = useState<boolean>(() => isMockModeEnabled());
 
@@ -44,34 +53,31 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Landing page — has its own full-width layout */}
+            {/* Landing page — own full-width layout with Navbar */}
             <Route path="/" element={<Index />} />
 
-            {/* All inner pages wrapped in AppShell (sidebar + topbar) */}
-            <Route element={<AppShell><Routes><Route path="*" element={null} /></Routes></AppShell>}>
-              {/* This won't work — use layout route pattern instead */}
+            {/* All inner pages — sidebar + topbar shell */}
+            <Route element={<AppLayout />}>
+              <Route path="/demo" element={<DemoPage />} />
+              <Route path="/roadmap" element={<RoadmapPage />} />
+              <Route path="/how-it-works" element={<HowItWorksPage />} />
+              <Route path="/integration" element={<IntegrationPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/history" element={<HistoryPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/portfolio" element={<PortfolioPage />} />
+              <Route path="/simulator" element={<SimulatorPage />} />
+              <Route path="/play" element={<PlayPage />} />
+              <Route path="/developers" element={<DevelopersPage />} />
+              <Route path="/docs/risk-model" element={<RiskModelPage />} />
+              <Route path="/alerts" element={<AlertsPage />} />
+              <Route path="/experiments" element={<ExperimentsPage />} />
+              <Route path="/oracle" element={<OraclePage />} />
             </Route>
-          </Routes>
 
-          {/* Use a simpler approach: AppShell wrapper per route group */}
-          <Routes>
-            <Route path="/demo" element={<AppShell><DemoPage /></AppShell>} />
-            <Route path="/roadmap" element={<AppShell><RoadmapPage /></AppShell>} />
-            <Route path="/how-it-works" element={<AppShell><HowItWorksPage /></AppShell>} />
-            <Route path="/integration" element={<AppShell><IntegrationPage /></AppShell>} />
-            <Route path="/settings" element={<AppShell><SettingsPage /></AppShell>} />
-            <Route path="/history" element={<AppShell><HistoryPage /></AppShell>} />
-            <Route path="/about" element={<AppShell><AboutPage /></AppShell>} />
-            <Route path="/portfolio" element={<AppShell><PortfolioPage /></AppShell>} />
-            <Route path="/simulator" element={<AppShell><SimulatorPage /></AppShell>} />
-            <Route path="/play" element={<AppShell><PlayPage /></AppShell>} />
-            <Route path="/developers" element={<AppShell><DevelopersPage /></AppShell>} />
-            <Route path="/docs/risk-model" element={<AppShell><RiskModelPage /></AppShell>} />
-            <Route path="/alerts" element={<AppShell><AlertsPage /></AppShell>} />
-            <Route path="/experiments" element={<AppShell><ExperimentsPage /></AppShell>} />
-            <Route path="/oracle" element={<AppShell><OraclePage /></AppShell>} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
-
           <DemoModeToggle isMock={useMock} onToggle={toggleMock} />
         </BrowserRouter>
       </TooltipProvider>

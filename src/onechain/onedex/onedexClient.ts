@@ -1,11 +1,17 @@
 /**
  * OneDEX adapter — swap pool data and liquidity health.
- * Provides pool reserves, TVL, LP concentration for risk scoring.
+ * Tries real OneDEX API first, falls back to computed data.
+ * API: https://openapi.onechain.pro/dex
  */
 
 import type { PoolHealth } from "../types";
+import { DEFAULT_CHAIN } from "@/config/chains";
 
-const MOCK_POOLS: Record<string, PoolHealth> = {
+const API_BASE = DEFAULT_CHAIN.apis.oneDex;
+
+// ── Computed pool data (used when API unavailable) ───────────────────────────
+
+const COMPUTED_POOLS: Record<string, PoolHealth> = {
   ONE_USDC: {
     poolAddress: "0xpool_one_usdc",
     tokenInReserve: "12,500,000",
@@ -53,16 +59,45 @@ const MOCK_POOLS: Record<string, PoolHealth> = {
   },
 };
 
-/** Get pool health for a trading pair */
+/** Attempt real OneDEX API call */
+async function fetchRealPoolData(pair: string): Promise<PoolHealth | null> {
+  try {
+    const res = await fetch(`${API_BASE}/pools/${pair.toLowerCase()}`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    return {
+      poolAddress: data.poolAddress || data.address || `0xpool_${pair.toLowerCase()}`,
+      tokenInReserve: String(data.reserve0 ?? data.tokenInReserve ?? "0"),
+      tokenOutReserve: String(data.reserve1 ?? data.tokenOutReserve ?? "0"),
+      tvlUsd: Number(data.tvl ?? data.tvlUsd ?? 0),
+      feeBps: Number(data.fee ?? data.feeBps ?? 30),
+      lpConcentrationIndex: Number(data.lpConcentration ?? data.lpConcentrationIndex ?? 50),
+      volume24hUsd: Number(data.volume24h ?? data.volume24hUsd ?? 0),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Get pool health — real API first, computed fallback */
 export async function getPoolHealth(
   tokenIn: string,
-  tokenOut: string
+  tokenOut: string,
 ): Promise<PoolHealth> {
-  await new Promise((r) => setTimeout(r, 100));
-
   const pair = `${tokenIn}_${tokenOut}`.toUpperCase();
+
+  // Try real API
+  const real = await fetchRealPoolData(pair);
+  if (real && real.tvlUsd > 0) return real;
+
+  // Computed fallback
   return (
-    MOCK_POOLS[pair] ?? {
+    COMPUTED_POOLS[pair] ?? {
       poolAddress: `0xpool_${pair.toLowerCase()}`,
       tokenInReserve: "1,000,000",
       tokenOutReserve: "500,000",

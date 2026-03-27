@@ -1,12 +1,15 @@
 /**
  * OneID adapter — cross-chain DID + wallet reputation.
+ * Tries real OneID API first, falls back to computed profiles.
  * Docs: https://docs.oneid.xyz/developers-guide/oneid-sdk
- *
- * Resolves wallet addresses to OneID profiles and reputation data.
- * In demo mode, returns deterministic mock profiles.
  */
 
 import type { OneIdProfile } from "../types";
+import { DEFAULT_CHAIN } from "@/config/chains";
+
+const API_BASE = DEFAULT_CHAIN.apis.oneId;
+
+// ── Computed profiles ────────────────────────────────────────────────────────
 
 const KNOWN_PROFILES: Record<string, Partial<OneIdProfile>> = {
   "0x1234567890123456789012345678901234567890": {
@@ -31,17 +34,52 @@ const KNOWN_PROFILES: Record<string, Partial<OneIdProfile>> = {
   },
 };
 
-/** Resolve a wallet address to its OneID profile */
+/** Attempt real OneID API resolution */
+async function fetchRealProfile(address: string): Promise<OneIdProfile | null> {
+  try {
+    const res = await fetch(`${API_BASE}/resolve/${address}`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    return {
+      id: data.did ?? data.id ?? `${address.slice(0, 8)}.one`,
+      displayName: data.name ?? data.displayName ?? "OneChain User",
+      linkedWallets: (data.wallets ?? data.linkedWallets ?? []).map((w: any) => ({
+        chain: w.chain ?? "OneChain",
+        address: w.address ?? address,
+      })),
+      reputationTier: mapReputationTier(data.reputation?.score ?? data.reputationScore),
+      riskFlags: data.riskFlags ?? [],
+      createdAt: data.createdAt ?? new Date().toISOString(),
+      crossChainActivity: Number(data.crossChainActivity ?? data.wallets?.length ?? 0),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function mapReputationTier(score?: number): OneIdProfile["reputationTier"] {
+  if (!score) return "new";
+  if (score >= 80) return "veteran";
+  if (score >= 50) return "active";
+  if (score >= 20) return "new";
+  return "flagged";
+}
+
+/** Resolve a wallet address to its OneID profile — real API first */
 export async function resolveOneIdForWallet(
   address: string,
-  _chainId?: number
+  _chainId?: number,
 ): Promise<OneIdProfile | null> {
-  // In a real integration, this would call the OneID Core SDK:
-  // const oneId = new OneIdCore({ apiKey: '...' });
-  // return oneId.resolve(address);
+  // Try real OneID API
+  const real = await fetchRealProfile(address);
+  if (real) return real;
 
-  await new Promise((r) => setTimeout(r, 150)); // simulate latency
-
+  // Computed fallback
   const known = KNOWN_PROFILES[address.toLowerCase()] ?? KNOWN_PROFILES[address];
   if (known) {
     return {

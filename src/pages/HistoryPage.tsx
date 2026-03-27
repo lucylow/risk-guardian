@@ -440,8 +440,6 @@ export default function HistoryPage() {
             })}
           </div>
         )}
-      </main>
-      <FooterSection />
-    </div>
+      </div>
   );
 }
